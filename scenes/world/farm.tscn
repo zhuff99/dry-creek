@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://scripts/world/spawn_point.gd" id="9_spawn"]
 [ext_resource type="PackedScene" path="res://scenes/objects/bottle.tscn" id="10_bottle"]
 [ext_resource type="Script" path="res://scripts/world/wildlife_spawner.gd" id="11_wildlife"]
+[ext_resource type="Script" path="res://scripts/objects/sign.gd" id="13_sign"]
 [ext_resource type="PackedScene" path="res://scenes/creatures/rattlesnake.tscn" id="12_snake"]
 [ext_resource type="PackedScene" path="res://scenes/world/farm_map.tscn" id="2_map"]
 [ext_resource type="Script" path="res://scripts/farming/farm_grid.gd" id="3_grid"]
@@ -12,6 +13,9 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="6_player"]
 [ext_resource type="Script" path="res://scripts/world/water_ambience.gd" id="7_water"]
 [ext_resource type="AudioStream" path="res://assets/derived/river_loop.wav" id="8_river"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_sign"]
+size = Vector2(20, 24)
 
 [node name="Farm" type="Node2D" node_paths=PackedStringArray("ground")]
 y_sort_enabled = true
@@ -69,3 +73,15 @@ creature_scene = ExtResource("12_snake")
 farm_grid = NodePath("../FarmGrid")
 entities = NodePath("../Entities")
 home = NodePath("../Spawns/cabin_door")
+
+[node name="TownSign" type="Area2D" parent="."]
+position = Vector2(728, 204)
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+script = ExtResource("13_sign")
+text = "Dry Creek, 4 miles. (The road to town is not open yet.)"
+prompt = "Read the sign"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TownSign"]
+shape = SubResource("RectangleShape2D_sign")

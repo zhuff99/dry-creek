@@ -70,9 +70,12 @@ const PROPS: Array[Dictionary] = [
 	{"what": "lantern post", "src": Tiles.SRC_CAMP, "at": Vector2i(6, 5), "cells": Vector2i(1, 2),
 		"box": Rect2(-7, 2, 5, 5), "cell": Vector2i(6, 14)},
 	{"what": "rain barrel", "src": Tiles.SRC_CAMP, "at": Vector2i(4, 5), "cells": Vector2i(1, 1),
-		"box": Rect2(-6, -1, 12, 8), "cell": Vector2i(10, 14)},
+		"box": Rect2(-6, -1, 12, 8), "cell": Vector2i(11, 12)},
 	{"what": "hay", "src": Tiles.SRC_CAMP, "at": Vector2i(0, 3), "cells": Vector2i(1, 2),
-		"box": Rect2(-7, -2, 14, 9), "cell": Vector2i(15, 14)},
+		"box": Rect2(-7, -2, 14, 9), "cell": Vector2i(15, 16)},
+	# Where the road leaves the map. farm.tscn puts the words on it.
+	{"what": "signpost", "src": Tiles.SRC_ELEMENT, "at": Vector2i(0, 2), "cells": Vector2i(1, 1),
+		"box": Rect2(-3, 2, 6, 5), "cell": Vector2i(45, 12)},
 	{"what": "hitching rail", "src": Tiles.SRC_ELEMENT, "at": Vector2i(11, 2), "cells": Vector2i(3, 2),
 		"box": Rect2(-20, 2, 40, 5), "cell": Vector2i(5, 16), "low": true},
 	# A second rail at the far end of the first field, for standing bottles
@@ -90,8 +93,16 @@ const RIVER_WIDTH := 3
 ## The ground the cabin stands on. The cabin itself is a scene placed in
 ## farm.tscn (scenes/objects/cabin.tscn), not tiles.
 const CABIN := Rect2i(6, 12, 5, 2)
-## The trodden strip in front of its door.
-const DOORYARD := Rect2i(7, 14, 3, 1)
+## The road, as strips of cells: a footpath from the cabin door, the wagon
+## road north to the river, and the same road east off the edge of the map,
+## which is the way to town. Nothing can be planted on a road; that is what
+## keeps the ground in front of the door open. Everything else on the ranch
+## can be cleared and planted.
+const ROADS: Array[Rect2i] = [
+	Rect2i(7, 14, 5, 1),
+	Rect2i(12, 4, 2, 11),
+	Rect2i(12, 13, 36, 2),
+]
 ## Areas kept free of rocks, trees and brush so the start of the game is not
 ## blocked: around the cabin, the yard with the shipping crate, the first
 ## field, and a trail north to the river.
@@ -160,7 +171,8 @@ func _build_tileset() -> TileSet:
 	var element := _add_source(tile_set, Tiles.SRC_ELEMENT, PACK + "TilesetElement.png")
 	var detail := _add_source(tile_set, Tiles.SRC_DETAIL, PACK + "TilesetFloorDetail.png")
 	var ripple := _add_source(tile_set, Tiles.SRC_RIPPLE, PACK + "WaterRipples.png")
-	for source: TileSetAtlasSource in [floor_source, water, soil, wet, nature, camp, element, detail, ripple]:
+	var road := _add_source(tile_set, Tiles.SRC_ROAD, "res://assets/derived/road.png")
+	for source: TileSetAtlasSource in [floor_source, water, soil, wet, nature, camp, element, detail, ripple, road]:
 		if source == null:
 			return null
 
@@ -186,6 +198,11 @@ func _build_tileset() -> TileSet:
 			soil.create_tile(piece)
 			wet.create_tile(piece)
 			water.create_tile(piece)
+			# Road: walkable, not tillable (it names no "tillable" data). The
+			# solid twin closes the road where it leaves the map.
+			road.create_tile(piece)
+			road.create_alternative_tile(piece, ALT)
+			_add_collision(road.get_tile_data(piece, ALT), full_tile)
 			var water_data := water.get_tile_data(piece, 0)
 			water_data.set_custom_data("water", true)
 			_add_collision(water_data, _water_shape(mask), LOW)
@@ -322,11 +339,15 @@ func _build_map(tile_set: TileSet) -> Error:
 				ground.set_cell(cell, Tiles.SRC_WATER, Blob.coords(mask))
 				if mask == 255 and rng.randf() < 0.3:
 					decor.set_cell(cell, Tiles.SRC_RIPPLE, RIPPLE)
+			elif _is_road(cell):
+				# On the map's edge the road is solid: town is not built yet.
+				var piece := Blob.coords(Blob.mask_at(cell, _is_road_or_outside))
+				ground.set_cell(cell, Tiles.SRC_ROAD, piece, ALT if _is_border(cell) else 0)
 			elif _is_border(cell):
 				ground.set_cell(cell, Tiles.SRC_FLOOR, Tiles.GROUND[0], ALT)
 				if (x + y) % 2 == 0:
 					objects.set_cell(cell, Tiles.SRC_NATURE, TREES[rng.randi() % TREES.size()], ALT)
-			elif CABIN.has_point(cell) or DOORYARD.has_point(cell):
+			elif CABIN.has_point(cell):
 				ground.set_cell(cell, Tiles.SRC_FLOOR, Tiles.GROUND[0], PACKED)
 			else:
 				ground.set_cell(cell, Tiles.SRC_FLOOR, _ground_tile(rng))
@@ -379,6 +400,21 @@ func _is_water_or_outside(cell: Vector2i) -> bool:
 	if cell.x < 0 or cell.x >= MAP_SIZE.x:
 		return _is_water(Vector2i(clampi(cell.x, 0, MAP_SIZE.x - 1), cell.y))
 	return _is_water(cell)
+
+
+func _is_road(cell: Vector2i) -> bool:
+	for strip: Rect2i in ROADS:
+		if strip.has_point(cell):
+			return true
+	return false
+
+
+## The road runs off the east side of the map, so off-map counts as road
+## there and the last tile does not get a rounded end.
+func _is_road_or_outside(cell: Vector2i) -> bool:
+	if cell.x >= MAP_SIZE.x:
+		return _is_road(Vector2i(MAP_SIZE.x - 1, cell.y))
+	return _is_road(cell)
 
 
 func _is_border(cell: Vector2i) -> bool:

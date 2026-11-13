@@ -36,8 +36,12 @@ const EXPECTED_SOUNDS: Array[StringName] = [
 ## Where the test stands to shoot: in the field, four tiles north of the
 ## bottles on the practice rail.
 const FIRING_SPOT := Vector2(360, 310)
-## A spot in the yard with the rain barrel just to the north.
+## A spot in the yard with the cabin's wall just to the north.
 const BY_THE_BARREL := Vector2(168, 250)
+## Cells on the three stretches of road, and one where it leaves the map.
+const ROAD_CELLS: Array[Vector2i] = [Vector2i(9, 14), Vector2i(13, 8), Vector2i(30, 13), Vector2i(13, 4)]
+const ROAD_EXIT := Vector2i(47, 13)
+const ROAD_SOURCE := 9
 
 var _out_dir := "user://smoke"
 var _failures := 0
@@ -135,6 +139,32 @@ func _run() -> void:
 	_check(not grid.can_till(Vector2i(8, 12)), "the ground under the cabin cannot be tilled")
 	_check(not grid.can_till(CABIN_DOOR_CELL), "nor can the doorstep")
 	_check(not grid.can_till(RIVER_CELL), "water cannot be tilled")
+
+	# --- The road: door to river and east off the map, never plantable.
+	var ground: TileMapLayer = main.get_node("World/Farm/Map/Ground")
+	var on_road := 0
+	var tillable_road := 0
+	for cell: Vector2i in ROAD_CELLS:
+		if ground.get_cell_source_id(cell) == ROAD_SOURCE:
+			on_road += 1
+		if grid.can_till(cell):
+			tillable_road += 1
+	_check(on_road == ROAD_CELLS.size(), "a road runs from the cabin door to the river and off to the east")
+	_check(tillable_road == 0 and not grid.is_blocked(ROAD_CELLS[2]), "the road is clear and cannot be planted")
+	_check(ground.get_cell_source_id(ROAD_EXIT) == ROAD_SOURCE, "it reaches the edge of the map")
+	# Everything that is not road, water, the cabin's footing or the map's
+	# edge is bare dirt that can be planted once it is cleared.
+	var plantable := 0
+	var land := 0
+	for cell: Vector2i in ground.get_used_cells():
+		if cell.x == 0 or cell.y == 0 or cell.x == 47 or cell.y == 31:
+			continue
+		if grid.is_water(cell) or ground.get_cell_source_id(cell) == ROAD_SOURCE:
+			continue
+		land += 1
+		if grid.is_tillable(cell):
+			plantable += 1
+	_check(plantable > land - 40, "all but %d of the %d other tiles are plantable ground" % [land - plantable, land])
 	var debris := objects.get_used_cells()
 	_check(debris.size() > 60, "rocks, trees and brush are scattered around (%d)" % debris.size())
 	_check(not grid.can_till(debris[0]), "a tile with something on it cannot be tilled")
@@ -455,7 +485,7 @@ func _run() -> void:
 	_check(weapon.spread > gun.steady_spread, "recoil widens the cone again")
 	_check(_world_events.has(&"gunshot"), "the shot is reported as a world event")
 
-	# From the yard, the rain barrel is in the way of a shot north.
+	# From the yard, the cabin is in the way of a shot north.
 	player.global_position = BY_THE_BARREL
 	await _physics_frames(3)
 	weapon.aim_override = BY_THE_BARREL + Vector2(0, -60)
@@ -555,6 +585,25 @@ func _run() -> void:
 	_check(not weapon.drawn and not player.armed, "the holster key puts it away")
 	await create_timer(0.6).timeout
 	_check(not held.visible, "and the gun is out of sight once it is holstered")
+
+	# --- The way out: the road is closed at the map's edge, and a sign says why.
+	player.global_position = grid.cell_center(ROAD_EXIT + Vector2i.LEFT) + Vector2(0, 4)
+	await _physics_frames(3)
+	Input.action_press(&"move_right")
+	await _physics_frames(90)
+	Input.action_release(&"move_right")
+	_check(grid.cell_at(player.global_position) == ROAD_EXIT + Vector2i.LEFT, "the road is closed where it leaves the map")
+	var sign_post: Node2D = main.get_node("World/Farm/TownSign")
+	player.global_position = sign_post.global_position + Vector2(0, 16)
+	await _physics_frames(4)
+	await _frames(3)
+	_press(&"interact")
+	await _frames(3)
+	_release(&"interact")
+	_check(String(main.get_node("UI/HUD/ToastRow/ToastLabel").text).contains("town"), "the sign beside it points to town")
+	Engine.time_scale = 1.0
+	await _shot("20b_road_east_end")
+	Engine.time_scale = 3.0
 
 	# --- A rattlesnake: it warns, settles if you back off, strikes if you
 	# come close, and one shot kills it.

@@ -11,9 +11,11 @@ extends SceneTree
 ##   its dirt, which is too faint to farm by. These are the same block with the
 ##   two soil colours deepened, and deepened further for watered plots.
 ## - cowboy_walk.png: the pack has no cowboy. Its "Inspector" already wears a
-##   wide-brimmed hat, a neckerchief and a long coat, so this is him with the
-##   white fedora turned into a tan hat with a dark band and the trench coat
-##   into a blue work shirt.
+##   neckerchief and a long coat, so this is him with the trench coat turned
+##   into a blue work shirt and his white fedora replaced, pixel for pixel,
+##   by a brown cowboy hat: creased crown, brim curling up at the sides.
+## - road.png: the pack's patch-of-darker-dirt tiles in the paler colour of a
+##   packed wagon road, for the track from the cabin to the river and away.
 ## - cowboy_aim.png: the same change made to his "attack" pose, one frame
 ##   per direction with the arm thrust out. It is the stance for aiming a gun.
 ## - rattlesnake.png: the pack's green snake in a rattler's sandy browns,
@@ -75,12 +77,25 @@ const FURNITURE_SHEET := Vector2i(4, 3)
 
 const INSPECTOR := "res://assets/ninja_adventure/characters/inspector/"
 const HAT_WHITE := "f2eaf1ff"
-## The hat is the top eight rows of the figure in every frame.
-const HAT_ROWS := 8
-const HAT_SWAPS := {
-	"f2eaf1ff": Color("e0b877"),  # white felt -> tan
-	"abc2bcff": Color("b98b55"),  # its shading
-	"a3754eff": Color("5a3a2a"),  # hat band
+## The hat, drawn over the fedora in every frame. One letter per pixel:
+## O outline, H felt, S felt in shade, B band, and a dot for nothing.
+const COWBOY_HAT: Array[String] = [
+	"....OOO..OOO....",
+	"...OHHHOOHHHO...",
+	"...OSHHHHHHSO...",
+	"OO.OBBBBBBBBO.OO",
+	"OHOOSHHHHHHSOOHO",
+	"OHHHHHHHHHHHHHHO",
+	".OSHHHHHHHHHHSO.",
+	"..OSSSSSSSSSSO..",
+]
+const HAT_INK := {
+	"O": Color("141b1b"), "H": Color("9b6a45"), "S": Color("7a4e34"), "B": Color("3b2a22"),
+}
+const ROAD_SWAPS := {
+	"90775eff": Color("c7aa90"),  # the patch itself: paler than the ground
+	"816855ff": Color("b3957f"),  # its marks, as wheel ruts
+	"8e7c73ff": Color("a28672"),  # the edge
 }
 const CLOTHES_SWAPS := {
 	"a3754eff": Color("5b7186"),  # brown coat -> blue shirt
@@ -96,6 +111,9 @@ func _init() -> void:
 
 	var dry := _cut(PACK + "TilesetFloor.png", Vector2i(11, 14), BLOB_BLOCK)
 	var wet := dry.duplicate() as Image
+	var road := dry.duplicate() as Image
+	_swap_colours(road, ROAD_SWAPS)
+	_save(road, "road.png")
 	_swap_colours(dry, DRY_SOIL_SWAPS)
 	_save(dry, "soil_dry.png")
 	_swap_colours(wet, WET_SOIL_SWAPS)
@@ -140,8 +158,8 @@ func _furniture() -> Image:
 	return sheet
 
 
-## One of the Inspector's sheets in ranch clothes. The hat and the coat share
-## a brown, so which swap applies depends on whether a pixel is in the hat.
+## One of the Inspector's sheets in ranch clothes: the fedora's rows are
+## replaced by the cowboy hat and the coat's browns become the shirt's blues.
 func _cowboy(sheet_path: String) -> Image:
 	var sheet := Image.load_from_file(ProjectSettings.globalize_path(sheet_path))
 	sheet.convert(Image.FORMAT_RGBA8)
@@ -155,12 +173,16 @@ func _cowboy(sheet_path: String) -> Image:
 			while top < T - 1 and not _row_has(sheet, frame, top + 1, HAT_WHITE):
 				top += 1
 			for y: int in T:
-				var swaps: Dictionary = HAT_SWAPS if y < top + HAT_ROWS else CLOTHES_SWAPS
+				var hat_row := y - top
 				for x: int in T:
 					var at := frame.position + Vector2i(x, y)
+					if hat_row >= 0 and hat_row < COWBOY_HAT.size():
+						var letter := COWBOY_HAT[hat_row][x]
+						sheet.set_pixelv(at, HAT_INK[letter] if letter != "." else Color(0, 0, 0, 0))
+						continue
 					var key := sheet.get_pixelv(at).to_html(true)
-					if swaps.has(key):
-						sheet.set_pixelv(at, swaps[key])
+					if CLOTHES_SWAPS.has(key):
+						sheet.set_pixelv(at, CLOTHES_SWAPS[key])
 	return sheet
 
 

@@ -14,8 +14,9 @@ const SRC_ELEMENT := 5  # TilesetElement.png: hitching rail, clothesline, scarec
 const SRC_DETAIL := 6  # TilesetFloorDetail.png: pebbles, twigs, bones
 const SRC_RIPPLE := 7  # WaterRipples.png: animated ripple
 const SRC_SOIL := 8  # derived/soil_dry.png: tilled soil
+const SRC_ROAD := 9  # derived/road.png: the wagon road
 
-# The river and both soil images hold exactly one blob block, so a piece's
+# The river, the road and both soil images hold exactly one blob block, so a piece's
 # atlas coordinates are what BlobTiles.coords() returns.
 
 ## Bare dirt: one plain tile and four with faint marks.

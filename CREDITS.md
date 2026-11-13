@@ -20,7 +20,8 @@ Made from Ninja Adventure files by `tools/build_derived_art.gd` and `tools/build
 
 - `water_on_dirt.png`: the pack's water-on-dirt tiles recoloured from purple to blue.
 - `soil_dry.png`, `soil_wet.png`: the pack's soil tiles with the soil colours deepened.
-- `cowboy_walk.png`: the pack's "Inspector" character with his white fedora recoloured into a tan hat with a dark band and his trench coat into a blue work shirt.
+- `cowboy_walk.png`: the pack's "Inspector" character with his trench coat recoloured into a blue work shirt, and his white fedora replaced by a brown cowboy hat drawn for this project.
+- `road.png`: the pack's darker-dirt patch tiles recoloured to the paler colour of a packed road.
 - `cowboy_aim.png`: the same recolour of the Inspector's "attack" pose (arm thrust out), used as the stance for aiming a gun.
 - `rattlesnake.png`: the pack's green snake (`Snake3`) recoloured in sandy browns with a pale tail tip.
 - `log_cabin.png`: not from a pack image. Drawn by `tools/cabin_painter.gd` for this project in the pack's colours, because the pack's buildings are Japanese houses. Original to this project.

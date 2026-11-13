@@ -25,6 +25,7 @@ Pillars:
 
 ### 3.1 Ranch restoration
 - The ranch is open dirt, not sand: all bare ground can be tilled. It starts overgrown, with rocks, trees, weeds, and grass covering most of it, so usable land is whatever has been cleared.
+- **The road** is the one part of the ranch that can never be planted: a footpath from the cabin door, a wagon road north to the river, and the same road east off the edge of the map, which is the way to town. It keeps the dooryard and the way to water open however much is planted. Apart from the road, the river and the ground the cabin and its yard furniture stand on, every tile can be cleared and planted.
 - Debris is cleared with tools: pickaxe for rocks (2 hits, drops stone), axe for trees (3 hits, drops wood), scythe for weeds and grass (1 hit, drops fiber). It will cost stamina once stamina exists. Rocks and trees block movement; weeds and grass only block tilling.
 - The axe, pickaxe and scythe are bought in town. Until the town exists (M3) they are in the starting kit.
 - Wood, stone and fiber are the materials the carpenter asks for.
