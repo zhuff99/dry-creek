@@ -31,6 +31,14 @@ signal interaction_prompt_changed(text: String)
 @warning_ignore("unused_signal")
 signal toast_requested(text: String)
 
+# --- Weapons ---
+## The player's gun came out of, or went back into, its holster.
+@warning_ignore("unused_signal")
+signal weapon_drawn_changed(drawn: bool)
+## Rounds in the gun changed (a shot, or a round loaded).
+@warning_ignore("unused_signal")
+signal rounds_changed(loaded: int)
+
 # --- World ---
 ## A door was used: show the area in `scene_path`, with the player on its
 ## spawn point named `spawn`. The World node does the swap.

@@ -7,6 +7,8 @@
 [ext_resource type="Texture2D" path="res://assets/placeholder/ui/tile_cursor.png" id="4_cursor"]
 [ext_resource type="Script" path="res://scripts/player/player_interactor.gd" id="5_interactor"]
 [ext_resource type="Script" path="res://scripts/player/player_tool_animator.gd" id="6_animator"]
+[ext_resource type="Script" path="res://scripts/player/player_weapon.gd" id="8_weapon"]
+[ext_resource type="Script" path="res://scripts/player/aim_guide.gd" id="9_guide"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_feet"]
 size = Vector2(10, 6)
@@ -16,6 +18,7 @@ radius = 14.0
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 2
+collision_mask = 17
 motion_mode = 1
 script = ExtResource("1_player")
 
@@ -87,3 +90,47 @@ script = ExtResource("5_interactor")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Interactor"]
 shape = SubResource("CircleShape2D_reach")
+
+[node name="Weapon" type="Node2D" parent="."]
+position = Vector2(0, -7)
+script = ExtResource("8_weapon")
+
+[node name="Gun" type="Sprite2D" parent="Weapon"]
+visible = false
+centered = false
+
+[node name="AimGuide" type="Node2D" parent="Weapon"]
+script = ExtResource("9_guide")
+
+[node name="Tracer" type="Line2D" parent="Weapon"]
+top_level = true
+z_index = 1
+width = 1.0
+default_color = Color(1, 0.93, 0.7, 1)
+
+[node name="MuzzleFlash" type="CPUParticles2D" parent="Weapon"]
+emitting = false
+amount = 6
+lifetime = 0.12
+one_shot = true
+explosiveness = 1.0
+spread = 25.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 30.0
+initial_velocity_max = 70.0
+scale_amount_max = 2.0
+color = Color(1, 0.85, 0.45, 1)
+
+[node name="Impact" type="CPUParticles2D" parent="Weapon"]
+top_level = true
+z_index = 1
+emitting = false
+amount = 6
+lifetime = 0.25
+one_shot = true
+explosiveness = 1.0
+spread = 50.0
+gravity = Vector2(0, 120)
+initial_velocity_min = 15.0
+initial_velocity_max = 40.0
+scale_amount_max = 2.0

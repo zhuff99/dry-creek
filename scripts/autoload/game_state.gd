@@ -17,12 +17,22 @@ const STARTING_ITEMS := {
 	&"scythe": 1,
 	&"corn_seeds": 12,
 	&"bean_seeds": 12,
+	&"revolver_rounds": 24,
 }
+## The gun the ranch came with. It is worn, not carried in the bag.
+const STARTING_WEAPON := &"revolver"
 
 var money: int = 0
 var inventory := Inventory.new(INVENTORY_SIZE)
 var farm := FarmData.new()
 var selected_slot: int = 0
+## The gun on the player's hip, or null if they own none.
+var weapon: WeaponData
+## Rounds in that gun right now.
+var rounds_loaded: int = 0:
+	set(value):
+		rounds_loaded = value
+		EventBus.rounds_changed.emit(rounds_loaded)
 ## Goods waiting in the shipping crate: item id -> count. Paid out overnight.
 var shipping_bin: Dictionary[StringName, int] = {}
 
@@ -30,6 +40,8 @@ var shipping_bin: Dictionary[StringName, int] = {}
 func _ready() -> void:
 	for id: StringName in STARTING_ITEMS:
 		inventory.add_item(ItemDB.get_item(id), STARTING_ITEMS[id])
+	weapon = ItemDB.get_item(STARTING_WEAPON) as WeaponData
+	rounds_loaded = weapon.chambers
 	EventBus.day_ended.connect(_on_day_ended)
 
 

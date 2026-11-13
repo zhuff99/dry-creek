@@ -24,6 +24,10 @@ const ALT := 1
 ## Alternative ground that can be walked on but not tilled: the earth under
 ## and in front of the cabin, and under the yard's furniture.
 const PACKED := 2
+## TileSet physics layers. "World" stops feet and bullets. "Low" stops only
+## feet: water, and rails a bullet passes over.
+const WORLD := 0
+const LOW := 1
 
 # --- atlas coordinates -------------------------------------------------------
 # TilesetNature.png. Trees are bigger than one cell.
@@ -56,7 +60,8 @@ const RIPPLE_FRAMES := 4
 # but they are not debris: no tool clears them.
 # Each: atlas source, atlas coordinates, size in cells, the box that blocks the
 # player (measured from the centre of the cell it stands on), and the map
-# cell. Art wider than a cell is centred on its cell.
+# cell. Art wider than a cell is centred on its cell. "low" things do not
+# stop bullets.
 const PROPS: Array[Dictionary] = [
 	{"what": "woodpile", "src": Tiles.SRC_CAMP, "at": Vector2i(0, 1), "cells": Vector2i(1, 2),
 		"box": Rect2(-7, -2, 14, 9), "cell": Vector2i(4, 13)},
@@ -69,9 +74,13 @@ const PROPS: Array[Dictionary] = [
 	{"what": "hay", "src": Tiles.SRC_CAMP, "at": Vector2i(0, 3), "cells": Vector2i(1, 2),
 		"box": Rect2(-7, -2, 14, 9), "cell": Vector2i(15, 14)},
 	{"what": "hitching rail", "src": Tiles.SRC_ELEMENT, "at": Vector2i(11, 2), "cells": Vector2i(3, 2),
-		"box": Rect2(-20, 2, 40, 5), "cell": Vector2i(5, 16)},
+		"box": Rect2(-20, 2, 40, 5), "cell": Vector2i(5, 16), "low": true},
+	# A second rail at the far end of the first field, for standing bottles
+	# on (farm.tscn). The open field in front of it is the shooting range.
+	{"what": "practice rail", "src": Tiles.SRC_ELEMENT, "at": Vector2i(11, 2), "cells": Vector2i(3, 2),
+		"box": Rect2(-20, 2, 40, 5), "cell": Vector2i(22, 24), "low": true},
 	{"what": "clothesline", "src": Tiles.SRC_ELEMENT, "at": Vector2i(14, 2), "cells": Vector2i(2, 2),
-		"box": Rect2(-14, 3, 28, 4), "cell": Vector2i(4, 8)},
+		"box": Rect2(-14, 3, 28, 4), "cell": Vector2i(4, 8), "low": true},
 	{"what": "scarecrow", "src": Tiles.SRC_ELEMENT, "at": Vector2i(15, 0), "cells": Vector2i(1, 1),
 		"box": Rect2(-3, 2, 6, 5), "cell": Vector2i(16, 15)},
 ]
@@ -133,6 +142,9 @@ func _build_tileset() -> TileSet:
 	tile_set.add_physics_layer()
 	tile_set.set_physics_layer_collision_layer(0, 1)  # "world"
 	tile_set.set_physics_layer_collision_mask(0, 0)
+	tile_set.add_physics_layer()
+	tile_set.set_physics_layer_collision_layer(LOW, 16)  # "low"
+	tile_set.set_physics_layer_collision_mask(LOW, 0)
 	# Custom data read by FarmGrid.
 	_add_data_layer(tile_set, 0, "tillable", TYPE_BOOL)
 	_add_data_layer(tile_set, 1, "water", TYPE_BOOL)
@@ -176,16 +188,20 @@ func _build_tileset() -> TileSet:
 			water.create_tile(piece)
 			var water_data := water.get_tile_data(piece, 0)
 			water_data.set_custom_data("water", true)
-			_add_collision(water_data, _water_shape(mask))
+			_add_collision(water_data, _water_shape(mask), LOW)
 
 	# Yard furniture.
 	for prop: Dictionary in PROPS:
 		var source: TileSetAtlasSource = camp if prop.src == Tiles.SRC_CAMP else element
+		# Two props may share a picture (both rails); the tile is made once.
+		if source.has_tile(prop.at):
+			continue
 		source.create_tile(prop.at, prop.cells)
 		var data := source.get_tile_data(prop.at, 0)
 		_place_tall(data, prop.cells)
 		var box: Rect2 = prop.box
-		_add_collision(data, _box(box.position.x, box.position.y, box.end.x, box.end.y))
+		var layer := LOW if prop.get("low", false) else WORLD
+		_add_collision(data, _box(box.position.x, box.position.y, box.end.x, box.end.y), layer)
 
 	# Ground litter and the animated ripple: decoration only.
 	for coords: Vector2i in DETAILS + BONES:
@@ -239,9 +255,9 @@ func _box(left: float, top: float, right: float, bottom: float) -> PackedVector2
 	])
 
 
-func _add_collision(data: TileData, polygon: PackedVector2Array) -> void:
-	data.add_collision_polygon(0)
-	data.set_collision_polygon_points(0, 0, polygon)
+func _add_collision(data: TileData, polygon: PackedVector2Array, layer: int = WORLD) -> void:
+	data.add_collision_polygon(layer)
+	data.set_collision_polygon_points(layer, 0, polygon)
 
 
 ## A water tile blocks the player, but its bank is dry land: pull the edge of

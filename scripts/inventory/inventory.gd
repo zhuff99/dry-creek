@@ -57,6 +57,35 @@ func can_fit(item: ItemData, count: int = 1) -> bool:
 	return false
 
 
+## How many of `item` are held, over all slots.
+func count_of(item: ItemData) -> int:
+	var total := 0
+	for stack: ItemStack in _slots:
+		if stack != null and stack.item == item:
+			total += stack.count
+	return total
+
+
+## Removes up to `count` of `item` from wherever it is held and returns how
+## many were removed.
+func remove_item(item: ItemData, count: int = 1) -> int:
+	var remaining := count
+	for i: int in _slots.size():
+		if remaining <= 0:
+			break
+		var stack := _slots[i]
+		if stack == null or stack.item != item:
+			continue
+		var taken: int = mini(remaining, stack.count)
+		stack.count -= taken
+		remaining -= taken
+		if stack.count <= 0:
+			_slots[i] = null
+	if remaining != count:
+		changed.emit()
+	return count - remaining
+
+
 ## Removes up to `count` from one slot and returns how many were removed.
 func remove_from_slot(index: int, count: int = 1) -> int:
 	var stack := get_slot(index)

@@ -25,8 +25,10 @@ var _primary_held: bool = false
 
 func _process(_delta: float) -> void:
 	var grid := _get_farm_grid()
-	if grid == null:
+	# No tile work indoors, or with a gun in hand.
+	if grid == null or _player.armed:
 		_cursor.hide()
+		_primary_held = false
 		return
 	var player_cell := grid.cell_at(_player.global_position)
 	var offset := grid.cell_at(get_global_mouse_position()) - player_cell
@@ -46,6 +48,8 @@ func _process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"primary_action"):
+		if _player.armed:
+			return
 		# Only clicks that reach the world count; clicks on UI never get here.
 		_primary_held = true
 		_explain_if_useless(target_cell)

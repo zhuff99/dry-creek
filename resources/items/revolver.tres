@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/items/revolver.png" id="2_icon"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/weapons/revolver_held.png" id="3_held"]
+[ext_resource type="Resource" path="res://resources/items/revolver_rounds.tres" id="4_ammo"]
+
+[resource]
+script = ExtResource("1_script")
+held_sprite = ExtResource("3_held")
+ammo_item = ExtResource("4_ammo")
+chambers = 6
+damage = 2
+reach = 176.0
+snap_spread = 16.0
+steady_spread = 1.5
+moving_spread = 9.0
+steady_seconds = 0.6
+recoil_spread = 7.0
+fire_interval = 0.45
+seconds_per_round = 0.4
+noise_radius = 640.0
+fire_sound = &"gunshot"
+empty_sound = &"gun_empty"
+load_sound = &"gun_load"
+draw_sound = &"gun_draw"
+holster_sound = &"gun_holster"
+id = &"revolver"
+display_name = "Revolver"
+description = "A single-action six-shooter. It came with the ranch."
+icon = ExtResource("2_icon")
+max_stack = 1
+buy_price = 400

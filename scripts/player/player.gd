@@ -18,6 +18,12 @@ const WALK_FPS := 8.0
 var facing := Vector2.DOWN
 ## True while an action animation (a tool swing) plays. Movement is locked.
 var busy: bool = false
+## True while a gun is drawn. Tools stay put away.
+var armed: bool = false
+## While true, walking does not turn the character (aiming decides that).
+var facing_locked: bool = false
+## Walking speed multiplier. Aiming and reloading slow you down.
+var speed_factor: float = 1.0
 
 var _walk_time: float = 0.0
 
@@ -29,13 +35,16 @@ func _physics_process(delta: float) -> void:
 	var input := Vector2.ZERO
 	if not busy:
 		input = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	velocity = input * move_speed
+	velocity = input * move_speed * speed_factor
 	if input == Vector2.ZERO:
 		_walk_time = 0.0
 		_update_sprite()
 		return
 	_walk_time += delta
-	face(input)
+	if facing_locked:
+		_update_sprite()
+	else:
+		face(input)
 	move_and_slide()
 
 
@@ -64,6 +73,12 @@ func _update_sprite() -> void:
 	if _walk_time > 0.0:
 		row = (int(_walk_time * WALK_FPS) + 1) % WALK_FRAMES
 	_sprite.frame_coords = Vector2i(column, row)
+
+
+## A short jolt of the camera, for a gunshot.
+func shake(pixels: float) -> void:
+	_camera.offset = Vector2.from_angle(randf() * TAU) * pixels
+	create_tween().tween_property(_camera, "offset", Vector2.ZERO, 0.12)
 
 
 ## Stops the camera from showing past the edge of the map. A place smaller

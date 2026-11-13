@@ -1,8 +1,8 @@
 extends SceneTree
 ## Dev tool: draws the few pieces of art the Ninja Adventure pack has no
 ## match for, as simple code-made placeholders in res://assets/placeholder/.
-## Right now that is the corn and bean crops, their harvested items, and the
-## tile cursor.
+## Right now that is the corn and bean crops, their harvested items, the tile
+## cursor, and the revolver (the pack has swords and bows but no guns).
 ##
 ## Run from the project folder:
 ##   godot --headless --path . -s res://tools/gen_placeholder_art.gd
@@ -17,15 +17,72 @@ const LEAF_DARK := Color("356f2c")
 const CORN := Color("f2cf3f")
 const BEAN := Color("b5562f")
 
+# The revolver is drawn in the pack's own colours. One letter per pixel:
+# O outline, M metal, S metal in shade, G grip, g grip in shade,
+# B brass, b brass in shade, L lead.
+const INK := {
+	"O": Color("141b1b"), "M": Color("8d977f"), "S": Color("5f7160"),
+	"G": Color("a3754e"), "g": Color("91522c"),
+	"B": Color("f1c471"), "b": Color("d78b4a"), "L": Color("8d977f"),
+}
+const REVOLVER_ICON: Array[String] = [
+	"................",
+	"................",
+	"................",
+	"................",
+	"....OOOOOOOOOOO.",
+	"...OMMMSSMMMMMMO",
+	"...OMSSSSSOOOOO.",
+	"..OGGSSSSO......",
+	".OGGGOOSO.......",
+	".OGGgO.OO.......",
+	".OGggO..........",
+	"OGGgO...........",
+	"OGggO...........",
+	".OOO............",
+	"................",
+	"................",
+]
+const ROUNDS_ICON: Array[String] = [
+	"................",
+	"................",
+	"................",
+	"..OO...OO...OO..",
+	".OLLO.OLLO.OLLO.",
+	".OLLO.OLLO.OLLO.",
+	".OBBO.OBBO.OBBO.",
+	".OBbO.OBbO.OBbO.",
+	".OBbO.OBbO.OBbO.",
+	".OBbO.OBbO.OBbO.",
+	".OBbO.OBbO.OBbO.",
+	".OBbO.OBbO.OBbO.",
+	".ObbO.ObbO.ObbO.",
+	".OOOO.OOOO.OOOO.",
+	"................",
+	"................",
+]
+## The gun in the hand, pointing right, grip at the bottom left.
+const REVOLVER_HELD: Array[String] = [
+	"..OOOOOOOOOO",
+	".OMMMSMMMMMO",
+	".OSSSSOOOOO.",
+	"OGGOSO......",
+	"OGgO.O......",
+	".OO.........",
+]
+
 
 func _init() -> void:
-	for sub: String in ["items", "crops", "ui"]:
+	for sub: String in ["items", "crops", "ui", "weapons"]:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT + sub))
 	_save(_tile_cursor(), "ui/tile_cursor.png")
 	_save(_corn_item(), "items/corn.png")
 	_save(_beans_item(), "items/beans.png")
 	_save(_crop_strip(CORN, false), "crops/corn_growth.png")
 	_save(_crop_strip(BEAN, true), "crops/beans_growth.png")
+	_save(_from_rows(REVOLVER_ICON), "items/revolver.png")
+	_save(_from_rows(ROUNDS_ICON), "items/revolver_rounds.png")
+	_save(_from_rows(REVOLVER_HELD), "weapons/revolver_held.png")
 	print("Placeholder art written to ", OUT)
 	quit()
 
@@ -44,6 +101,18 @@ func _save(img: Image, rel_path: String) -> void:
 
 func _rect(img: Image, x: int, y: int, w: int, h: int, color: Color) -> void:
 	img.fill_rect(Rect2i(x, y, w, h), color)
+
+
+## Builds a picture from rows of letters, one letter per pixel (see INK).
+## A dot is a see-through pixel.
+func _from_rows(rows: Array[String]) -> Image:
+	var img := _new(rows[0].length(), rows.size())
+	for y: int in rows.size():
+		for x: int in rows[y].length():
+			var letter := rows[y][x]
+			if letter != ".":
+				img.set_pixel(x, y, INK[letter])
+	return img
 
 
 func _tile_cursor() -> Image:

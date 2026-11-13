@@ -67,9 +67,11 @@ Pillars:
 
 ### 3.8 Combat
 Central, not optional. Aiming is inspired by Desperados 3.
-- Draw or holster a weapon at any time. A drawn weapon is itself a world event that NPCs see.
-- Hold right-click to aim: a visible aim line shows the shot path and what it will hit. Left-click fires.
-- Reloading takes time. Weapons are data (`WeaponData`): revolver (balanced), rifle (long, slow), shotgun (short cone).
+- **Drawing:** one key (Q) draws or holsters, whatever is on the hotbar. The gun is worn on the hip, not carried in the bag. Tools cannot be used while it is out. A drawn weapon is itself a world event that NPCs see.
+- **Aiming:** hold right-click to raise the gun. An aim cone appears: a centre line to whatever the shot would strike (red when that is a target) and two edges a shot could stray to. The cone starts wide, narrows to almost a line over about half a second of standing still, settles wider while walking, and is kicked wider by each shot. Aiming slows walking and the character faces where they aim.
+- **Firing:** left-click, only while aiming, so there are no accidental shots. A shot lands the instant it is fired, somewhere inside the cone and more often near its middle. It stops at the first wall, tree or rock (their footprint) or the first target (its sprite), and passes over water and rails.
+- **Reloading:** hold R and rounds go in one at a time; let go and fire with whatever is loaded. Rounds are an inventory item, bought in town later. The revolver holds six.
+- Weapons are data (`WeaponData`: reach, damage, cone widths, timings, sounds): revolver (balanced), rifle (long, slow), shotgun (short cone). Anything can be shot by giving it a `Hurtbox`.
 - Weapons upgrade at the blacksmith.
 
 ### 3.9 Enemies

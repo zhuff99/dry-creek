@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/item_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/items/revolver_rounds.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"revolver_rounds"
+display_name = "Revolver Rounds"
+description = "Cartridges for a six-shooter. Hold R with the gun drawn to load them."
+icon = ExtResource("2_icon")
+max_stack = 99
+buy_price = 2

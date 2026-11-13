@@ -5,6 +5,7 @@ const TOAST_HOLD_SECONDS := 2.5
 const TOAST_FADE_SECONDS := 0.5
 
 var _toast_tween: Tween
+var _gun_drawn: bool = false
 
 @onready var _day_label: Label = $TopBar/DayLabel
 @onready var _money_label: Label = $TopBar/MoneyLabel
@@ -20,6 +21,8 @@ func _ready() -> void:
 	EventBus.toast_requested.connect(_show_toast)
 	EventBus.hotbar_slot_selected.connect(_on_slot_selected)
 	GameState.inventory.changed.connect(_refresh_item_label)
+	EventBus.weapon_drawn_changed.connect(_on_weapon_drawn_changed)
+	EventBus.rounds_changed.connect(func(_loaded: int) -> void: _refresh_item_label())
 	_on_day_started(GameClock.day)
 	_on_money_changed(GameState.money)
 	_on_prompt_changed("")
@@ -43,7 +46,20 @@ func _on_slot_selected(_index: int) -> void:
 	_refresh_item_label()
 
 
+func _on_weapon_drawn_changed(drawn: bool) -> void:
+	_gun_drawn = drawn
+	_refresh_item_label()
+
+
+## Names what is in hand: the drawn gun and its rounds, or the hotbar item.
 func _refresh_item_label() -> void:
+	var weapon := GameState.weapon
+	if _gun_drawn and weapon != null:
+		_set_text(_item_label, "%s  %d/%d   %d spare" % [
+			weapon.display_name, GameState.rounds_loaded, weapon.chambers,
+			GameState.inventory.count_of(weapon.ammo_item),
+		])
+		return
 	var stack := GameState.selected_stack()
 	if stack == null:
 		_set_text(_item_label, "")

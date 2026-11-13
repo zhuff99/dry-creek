@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/world/world_area.gd" id="1_farm"]
 [ext_resource type="Script" path="res://scripts/world/spawn_point.gd" id="9_spawn"]
+[ext_resource type="PackedScene" path="res://scenes/objects/bottle.tscn" id="10_bottle"]
 [ext_resource type="PackedScene" path="res://scenes/world/farm_map.tscn" id="2_map"]
 [ext_resource type="Script" path="res://scripts/farming/farm_grid.gd" id="3_grid"]
 [ext_resource type="PackedScene" path="res://scenes/objects/cabin.tscn" id="4_cabin"]
@@ -34,6 +35,15 @@ position = Vector2(136, 224)
 
 [node name="ShippingCrate" parent="Entities" instance=ExtResource("5_crate")]
 position = Vector2(216, 248)
+
+[node name="Bottle1" parent="Entities" instance=ExtResource("10_bottle")]
+position = Vector2(351, 401)
+
+[node name="Bottle2" parent="Entities" instance=ExtResource("10_bottle")]
+position = Vector2(360, 401)
+
+[node name="Bottle3" parent="Entities" instance=ExtResource("10_bottle")]
+position = Vector2(369, 401)
 
 [node name="Player" parent="Entities" instance=ExtResource("6_player")]
 position = Vector2(136, 236)

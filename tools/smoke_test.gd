@@ -30,7 +30,13 @@ const EXPECTED_SOUNDS: Array[StringName] = [
 	&"chop", &"tree_fall", &"rock_hit", &"rock_break", &"swing_blade", &"cut",
 	&"ship", &"payout", &"sleep", &"morning",
 	&"select", &"ui_open", &"ui_close", &"ui_pick", &"ui_place", &"error", &"door",
+	&"gun_draw", &"gun_holster", &"gunshot", &"gun_empty", &"gun_load", &"bottle_break",
 ]
+## Where the test stands to shoot: in the field, four tiles north of the
+## bottles on the practice rail.
+const FIRING_SPOT := Vector2(360, 310)
+## A spot in the yard with the rain barrel just to the north.
+const BY_THE_BARREL := Vector2(168, 250)
 
 var _out_dir := "user://smoke"
 var _failures := 0
@@ -40,6 +46,8 @@ var _failures := 0
 var _state: Node
 var _clock: Node
 var _bus: Node
+## Types of every world event reported during the run.
+var _world_events: Array[StringName] = []
 
 
 func _initialize() -> void:
@@ -63,6 +71,7 @@ func _run() -> void:
 	_state = root.get_node("GameState")
 	_clock = root.get_node("GameClock")
 	_bus = root.get_node("EventBus")
+	_bus.world_event.connect(func(event: RefCounted) -> void: _world_events.append(event.type))
 	Engine.time_scale = 3.0
 
 	var main: Node = load("res://scenes/main.tscn").instantiate()
@@ -362,6 +371,104 @@ func _run() -> void:
 			# What a click on it would run first: "use the axe" and a buzz.
 			item_user.call(&"_explain_if_useless", cell)
 			break
+	# --- The revolver: draw, steady the aim, shoot a bottle, run dry, reload.
+	var weapon: Node = player.get_node("Weapon")
+	var gun: Resource = _state.weapon
+	var rounds: Resource = item_db.get_item(&"revolver_rounds")
+	var spare: int = _state.inventory.count_of(rounds)
+	_check(gun != null and _state.rounds_loaded == 6 and spare == 24, "the game starts with a loaded revolver and 24 spare rounds")
+	var bottle: Node2D = main.get_node("World/Farm/Entities/Bottle2")
+	player.global_position = FIRING_SPOT
+	await _physics_frames(3)
+	_state.select_slot(HOE_SLOT)
+	_press(&"toggle_weapon")
+	await _frames(2)
+	_release(&"toggle_weapon")
+	_check(weapon.drawn and player.armed, "the holster key draws the revolver")
+	_check(_world_events.has(&"weapon_drawn"), "drawing it is reported as a world event")
+	var plots_with_gun: int = _state.farm.plots.size()
+	_press(&"primary_action")
+	await _frames(3)
+	_release(&"primary_action")
+	await _frames(3)
+	_check(_state.rounds_loaded == 6 and _state.farm.plots.size() == plots_with_gun and not player.busy,
+			"a click with the gun lowered neither fires nor swings the hoe")
+
+	weapon.aim_override = bottle.get_node("Hurtbox").global_position
+	_press(&"aim")
+	await _frames(2)
+	var first_spread: float = weapon.spread
+	_check(weapon.aiming and first_spread > gun.steady_spread * 4.0, "raising the gun starts with a wide cone (%.1f degrees)" % first_spread)
+	Engine.time_scale = 1.0
+	await create_timer(0.3).timeout
+	await _shot("19_aiming")
+	Engine.time_scale = 3.0
+	await create_timer(0.8).timeout
+	_check(is_equal_approx(weapon.spread, gun.steady_spread), "holding still steadies it (%.1f degrees)" % weapon.spread)
+	_check(player.facing == Vector2.DOWN, "the player faces where they aim")
+	# Aim far off for this one, so a few steps sideways do not change the
+	# direction to the target.
+	var bottle_at: Vector2 = weapon.aim_override
+	weapon.aim_override = FIRING_SPOT + Vector2(0, 400)
+	Input.action_press(&"move_left")
+	await _physics_frames(20)
+	_check(weapon.spread > gun.steady_spread and player.facing == Vector2.DOWN,
+			"walking widens the cone and does not turn the player (%.1f degrees, facing %s)" % [weapon.spread, player.facing])
+	_check(absf(player.velocity.x) < 60.0, "and is slower than a normal walk (%.0f px/s)" % absf(player.velocity.x))
+	Input.action_release(&"move_left")
+	player.global_position = FIRING_SPOT
+	weapon.aim_override = bottle_at
+	await create_timer(0.8).timeout
+
+	_press(&"primary_action")
+	await _frames(2)
+	_release(&"primary_action")
+	await _frames(2)
+	_check(bottle.broken, "a steady shot breaks the bottle")
+	_check(_state.rounds_loaded == 5, "firing uses a round")
+	_check(weapon.spread > gun.steady_spread, "recoil widens the cone again")
+	_check(_world_events.has(&"gunshot"), "the shot is reported as a world event")
+
+	# From the yard, the rain barrel is in the way of a shot north.
+	player.global_position = BY_THE_BARREL
+	await _physics_frames(3)
+	weapon.aim_override = BY_THE_BARREL + Vector2(0, -60)
+	await create_timer(0.8).timeout
+	_press(&"primary_action")
+	await _frames(2)
+	_release(&"primary_action")
+	_check(weapon.last_hit_point.y > BY_THE_BARREL.y - 30.0 and weapon.last_hit_point.y < BY_THE_BARREL.y,
+			"something solid stops a bullet (%.0f px away)" % (BY_THE_BARREL.y - 7.0 - weapon.last_hit_point.y))
+	for i: int in 4:
+		await create_timer(0.6).timeout
+		_press(&"primary_action")
+		await _frames(2)
+		_release(&"primary_action")
+	_check(_state.rounds_loaded == 0, "six shots empty the cylinder")
+	await create_timer(0.6).timeout
+	_press(&"primary_action")
+	await _frames(2)
+	_release(&"primary_action")
+	_check(_state.rounds_loaded == 0 and audio.play_counts.get(&"gun_empty", 0) == 1, "an empty gun only clicks")
+	_release(&"aim")
+	await _frames(2)
+
+	_press(&"reload")
+	await create_timer(1.0).timeout
+	_release(&"reload")
+	await _frames(2)
+	_check(_state.rounds_loaded == 2 and _state.inventory.count_of(rounds) == spare - 2,
+			"holding reload loads one round at a time (%d in after a second)" % _state.rounds_loaded)
+	_press(&"reload")
+	await create_timer(2.5).timeout
+	_release(&"reload")
+	_check(_state.rounds_loaded == 6 and _state.inventory.count_of(rounds) == spare - 6, "and stops when the cylinder is full")
+	weapon.aim_override = null
+	_press(&"toggle_weapon")
+	await _frames(2)
+	_release(&"toggle_weapon")
+	_check(not weapon.drawn and not player.armed, "the holster key puts it away")
+
 	# --- The cabin: in by the door, sleep in the bed, back out. The farm is
 	# freed while inside and rebuilt from GameState on the way out.
 	var world: Node = main.get_node("World")

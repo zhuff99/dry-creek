@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/objects/bottle.gd" id="1_bottle"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/tilesets/tileset_camp.png" id="2_sprite"]
+[ext_resource type="Script" path="res://scripts/combat/hurtbox.gd" id="3_hurtbox"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sprite"]
+atlas = ExtResource("2_sprite")
+region = Rect2(192, 112, 16, 16)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_glass"]
+size = Vector2(9, 14)
+
+[node name="Bottle" type="Node2D"]
+script = ExtResource("1_bottle")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = SubResource("AtlasTexture_sprite")
+centered = false
+offset = Vector2(-8, -36)
+
+[node name="Hurtbox" type="Area2D" parent="."]
+position = Vector2(0, -28)
+collision_layer = 8
+collision_mask = 0
+monitoring = false
+script = ExtResource("3_hurtbox")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("RectangleShape2D_glass")
+
+[node name="Shards" type="CPUParticles2D" parent="."]
+position = Vector2(0, -28)
+emitting = false
+amount = 8
+lifetime = 0.35
+one_shot = true
+explosiveness = 1.0
+spread = 40.0
+gravity = Vector2(0, 200)
+initial_velocity_min = 30.0
+initial_velocity_max = 70.0
+scale_amount_max = 2.0
