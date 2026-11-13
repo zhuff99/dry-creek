@@ -13,3 +13,4 @@ drop_item = ExtResource("2_drop")
 drop_min = 1
 drop_max = 1
 chip_color = Color(0.37, 0.54, 0.29, 1)
+break_sound = &"cut"

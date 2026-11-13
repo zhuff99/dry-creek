@@ -22,6 +22,7 @@ EventBus="*res://scripts/autoload/event_bus.gd"
 ItemDB="*res://scripts/autoload/item_db.gd"
 GameClock="*res://scripts/autoload/game_clock.gd"
 GameState="*res://scripts/autoload/game_state.gd"
+Audio="*res://scripts/autoload/audio.gd"
 
 [display]
 

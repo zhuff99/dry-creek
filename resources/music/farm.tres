@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="MusicPlaylist" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/music_playlist.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/data/music_track.gd" id="2_track"]
+[ext_resource type="AudioStream" path="res://assets/ninja_adventure/audio/music/calm_village.ogg" id="s0"]
+[ext_resource type="AudioStream" path="res://assets/ninja_adventure/audio/music/chill.ogg" id="s1"]
+[ext_resource type="AudioStream" path="res://assets/ninja_adventure/audio/music/clearing.ogg" id="s2"]
+
+[sub_resource type="Resource" id="t0"]
+script = ExtResource("2_track")
+stream = ExtResource("s0")
+volume_db = -2.0
+
+[sub_resource type="Resource" id="t1"]
+script = ExtResource("2_track")
+stream = ExtResource("s1")
+volume_db = 1.0
+
+[sub_resource type="Resource" id="t2"]
+script = ExtResource("2_track")
+stream = ExtResource("s2")
+volume_db = -7.0
+
+[resource]
+script = ExtResource("1_script")
+id = &"farm"
+tracks = Array[ExtResource("2_track")]([SubResource("t0"), SubResource("t1"), SubResource("t2")])
+plays_per_track = 2
+gap_seconds = 15.0

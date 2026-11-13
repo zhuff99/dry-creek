@@ -14,15 +14,15 @@ var _debris: Dictionary[StringName, DebrisData] = {}
 
 
 func _ready() -> void:
-	for res: Resource in _load_all(ITEM_DIR):
+	for res: Resource in ResourceFolder.load_all(ITEM_DIR):
 		var item := res as ItemData
 		if item != null:
 			_items[item.id] = item
-	for res: Resource in _load_all(CROP_DIR):
+	for res: Resource in ResourceFolder.load_all(CROP_DIR):
 		var crop := res as CropData
 		if crop != null:
 			_crops[crop.id] = crop
-	for res: Resource in _load_all(DEBRIS_DIR):
+	for res: Resource in ResourceFolder.load_all(DEBRIS_DIR):
 		var debris := res as DebrisData
 		if debris != null:
 			_debris[debris.id] = debris
@@ -47,19 +47,3 @@ func get_debris(id: StringName) -> DebrisData:
 	if debris == null:
 		push_error("ItemDB: unknown debris id '%s'" % id)
 	return debris
-
-
-func _load_all(dir_path: String) -> Array[Resource]:
-	var out: Array[Resource] = []
-	var dir := DirAccess.open(dir_path)
-	if dir == null:
-		push_error("ItemDB: cannot open %s" % dir_path)
-		return out
-	for file: String in dir.get_files():
-		# Exported builds list resources as "name.tres.remap".
-		var clean := file.trim_suffix(".remap")
-		if clean.ends_with(".tres") or clean.ends_with(".res"):
-			out.append(load(dir_path.path_join(clean)))
-	for sub: String in dir.get_directories():
-		out.append_array(_load_all(dir_path.path_join(sub)))
-	return out

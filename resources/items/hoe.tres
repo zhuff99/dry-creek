@@ -6,6 +6,8 @@
 [resource]
 script = ExtResource("1_script")
 tool_type = 0
+start_sound = &"swing"
+use_sound = &"till"
 id = &"hoe"
 display_name = "Hoe"
 description = "Tills soft dirt so it can be planted."

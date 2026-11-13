@@ -11,3 +11,9 @@ enum UseAnimation { SWING, POUR, DIP }
 @export var use_animation: UseAnimation = UseAnimation.SWING
 ## Uses the tool holds before it must be refilled. 0 = never runs out.
 @export_range(0, 200) var capacity: int = 0
+## Sound cue ids (see SoundCue). Either may be left empty.
+## Played as the motion begins: the swish of a swing, water leaving the can.
+@export var start_sound: StringName
+## Played when the tool takes effect on the ground, like the hoe biting in.
+## Clearing debris uses the debris' own sounds instead.
+@export var use_sound: StringName

@@ -4,7 +4,8 @@ extends SceneTree
 ##
 ##   godot --path . -s res://tools/smoke_test.gd -- <screenshot_folder>
 ##
-## Exit code is the number of failed checks.
+## Exit code is the number of failed checks. The run is silent: it mutes the
+## master bus, and checks sounds by counting which cues were played.
 
 const CORN_CELLS: Array[Vector2i] = [Vector2i(17, 17), Vector2i(18, 17), Vector2i(19, 17)]
 const BEAN_CELLS: Array[Vector2i] = [Vector2i(17, 19), Vector2i(18, 19), Vector2i(19, 19)]
@@ -21,6 +22,13 @@ const BANK_CELL := Vector2i(13, 4)
 const RIVER_CELL := Vector2i(13, 3)
 ## Real seconds before the run gives up.
 const WATCHDOG_SECONDS := 90.0
+## Every sound cue the playthrough should set off at least once.
+const EXPECTED_SOUNDS: Array[StringName] = [
+	&"swing", &"till", &"pour", &"refill", &"plant", &"harvest",
+	&"chop", &"tree_fall", &"rock_hit", &"rock_break", &"swing_blade", &"cut",
+	&"ship", &"payout", &"sleep", &"morning",
+	&"select", &"ui_open", &"ui_close", &"ui_pick", &"ui_place", &"error",
+]
 
 var _out_dir := "user://smoke"
 var _failures := 0
@@ -37,6 +45,7 @@ func _initialize() -> void:
 	if args.size() > 0:
 		_out_dir = args[0]
 	DirAccess.make_dir_recursive_absolute(_out_dir)
+	AudioServer.set_bus_mute(0, true)
 	# A script error would otherwise leave the window open forever.
 	create_timer(WATCHDOG_SECONDS, true, false, true).timeout.connect(_on_watchdog)
 	_run()
@@ -63,7 +72,15 @@ func _run() -> void:
 	var crate: Node2D = main.get_node("World/Farm/Entities/ShippingCrate")
 	var panel: Control = main.get_node("UI/InventoryPanel")
 	var objects: TileMapLayer = main.get_node("World/Farm/Map/Objects")
+	var audio: Node = root.get_node("Audio")
+	var river_sound: AudioStreamPlayer = main.get_node("World/Farm/RiverSound")
 	await _shot("01_start")
+
+	# --- Sound: the farm starts its music, and the river is faint from the cabin.
+	_check(audio.current_playlist() == &"farm" and audio.is_music_playing(), "the farm's music is playing")
+	_check(river_sound.playing, "the river sound is running")
+	await create_timer(1.5).timeout
+	var river_db_at_cabin := river_sound.volume_db
 
 	# --- Movement and collision: walk left from spawn into the cabin wall.
 	var start_x := player.global_position.x
@@ -166,9 +183,15 @@ func _run() -> void:
 	await _frames(3)
 	_check(panel.visible and paused, "backpack opens and pauses")
 	await _shot("08_backpack")
-	_state.inventory.move_slot(CORN_SEED_SLOT, 20)
-	_check(_state.inventory.get_slot(20) != null, "stacks can be moved between slots")
-	_state.inventory.move_slot(20, CORN_SEED_SLOT)
+	# Click a stack, then an empty slot, the way the panel's buttons report it.
+	var slots: Node = panel.get_node("Margin/VBox/Grid")
+	slots.get_child(CORN_SEED_SLOT).pressed.emit()
+	slots.get_child(20).pressed.emit()
+	_check(_state.inventory.get_slot(20) != null and _state.inventory.get_slot(CORN_SEED_SLOT) == null,
+			"stacks can be moved between slots")
+	slots.get_child(20).pressed.emit()
+	slots.get_child(CORN_SEED_SLOT).pressed.emit()
+	_check(_state.inventory.get_slot(CORN_SEED_SLOT) != null, "and moved back")
 	_press(&"toggle_inventory")
 	await _frames(3)
 	_check(not panel.visible and not paused, "backpack closes and unpauses")
@@ -250,6 +273,9 @@ func _run() -> void:
 	await _physics_frames(60)
 	Input.action_release(&"move_up")
 	_check(grid.cell_at(player.global_position) == BANK_CELL, "the river cannot be walked into")
+	await create_timer(1.5).timeout
+	_check(river_sound.volume_db > river_db_at_cabin + 6.0,
+			"the river is louder at the bank (%.0f dB) than at the cabin (%.0f dB)" % [river_sound.volume_db, river_db_at_cabin])
 	item_user.use_item_at(RIVER_CELL)
 	await create_timer(0.25).timeout
 	await _shot("16_filling_can")
@@ -317,6 +343,19 @@ func _run() -> void:
 	await item_user.use_item_at(grass)
 	_check(not grid.is_blocked(grass), "the scythe cuts grass in one hit")
 	await _shot("18_after_clearing")
+
+	# --- Sound: a click that does nothing says so, and every cue was heard.
+	_state.select_slot(HOE_SLOT)
+	for cell: Vector2i in objects.get_used_cells():
+		if grid.debris_at(cell) != null:
+			# What a click on it would run first: "use the axe" and a buzz.
+			item_user.call(&"_explain_if_useless", cell)
+			break
+	for cue: StringName in EXPECTED_SOUNDS:
+		_check(audio.play_counts.get(cue, 0) > 0, "sound '%s' played (%d times)" % [cue, audio.play_counts.get(cue, 0)])
+	for cue: StringName in audio.cue_ids():
+		if not EXPECTED_SOUNDS.has(cue):
+			_check(false, "sound '%s' exists but the playthrough never checks it" % cue)
 
 	print("\nSMOKE TEST: %s (%d failed)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(_failures)

@@ -18,3 +18,7 @@ extends Resource
 @export_range(0, 20) var drop_max: int = 1
 ## Colour of the chips that fly when it is hit.
 @export var chip_color := Color(0.42, 0.28, 0.17)
+## Sound cue ids (see SoundCue): each hit that leaves it standing, and the
+## hit that removes it. Either may be left empty.
+@export var hit_sound: StringName
+@export var break_sound: StringName

@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_script")
 tool_type = 4
+start_sound = &"swing_blade"
 id = &"scythe"
 display_name = "Scythe"
 description = "Cuts weeds and grass."

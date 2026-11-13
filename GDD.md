@@ -172,6 +172,7 @@ Everything hangs off one mechanism: **actions emit world events, and only NPCs w
 - **Scene layout:** `main.tscn` holds a `World` slot (currently the farm) and a persistent `UI` layer, so areas can be swapped without rebuilding the HUD.
 - **Pixel art:** 480x270 base resolution (30 tiles across, the same framing as Stardew Valley), viewport stretch with integer scaling, nearest-neighbor filtering, pixel snapping.
 - **Physics layers:** 1 world, 2 player, 3 interactable (more added with NPCs and projectiles).
+- **Sound:** the `Audio` autoload plays effects by name (`Audio.play(&"chop")`) from `SoundCue` resources in `resources/sounds/`, and music from `MusicPlaylist` resources in `resources/music/`. Tools and debris name their own cues in their data, so a new tool or rock needs no audio code. Volumes are per bus (Music, SFX, Ambience) in `default_bus_layout.tres`. The files are from the Ninja Adventure pack.
 - **Art:** the Ninja Adventure pack (CC0) in `assets/ninja_adventure/`, a few recoloured pieces in `assets/derived/`, and code-drawn placeholders in `assets/placeholder/` for what the pack lacks (crops). `tools/gen_farm_map.gd` builds the TileSet and map from them. Every pack is credited in `CREDITS.md`.
 
 ## 7. Milestone roadmap

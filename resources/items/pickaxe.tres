@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_script")
 tool_type = 3
+start_sound = &"swing"
 id = &"pickaxe"
 display_name = "Pickaxe"
 description = "Breaks rocks into stone."

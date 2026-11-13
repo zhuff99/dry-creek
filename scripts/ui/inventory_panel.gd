@@ -34,6 +34,7 @@ func toggle() -> void:
 		return
 	visible = not visible
 	get_tree().paused = visible
+	Audio.play(&"ui_open" if visible else &"ui_close")
 	_held_index = NO_SLOT
 	_refresh()
 
@@ -42,8 +43,10 @@ func _on_slot_pressed(index: int) -> void:
 	if _held_index == NO_SLOT:
 		if GameState.inventory.get_slot(index) != null:
 			_held_index = index
+			Audio.play(&"ui_pick")
 			_refresh()
 		return
+	Audio.play(&"ui_place")
 	var from := _held_index
 	_held_index = NO_SLOT
 	GameState.inventory.move_slot(from, index)

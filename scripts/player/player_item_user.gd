@@ -101,31 +101,36 @@ func use_item_at(cell: Vector2i) -> void:
 		Action.HARVEST:
 			_harvest(grid, cell, where)
 		Action.TILL:
-			await _use_tool(grid, cell, _held_tool().use_animation, grid.till.bind(cell))
+			await _use_tool(grid, cell, _held_tool().use_animation, _till.bind(grid, cell))
 		Action.WATER:
 			await _use_tool(grid, cell, _held_tool().use_animation, _pour_water.bind(grid, cell))
 		Action.REFILL:
-			await _use_tool(grid, cell, ToolData.UseAnimation.DIP, _refill_can)
+			await _use_tool(grid, cell, ToolData.UseAnimation.DIP, _refill_can, &"refill")
 		Action.CLEAR:
 			var chips := grid.debris_at(cell).chip_color
-			await _use_tool(grid, cell, _held_tool().use_animation, _hit_debris.bind(grid, cell), chips)
+			var swish := _held_tool().start_sound
+			await _use_tool(grid, cell, _held_tool().use_animation, _hit_debris.bind(grid, cell), swish, chips)
 		Action.PLANT:
 			var seed_item := GameState.selected_stack().item as SeedData
 			if grid.plant(cell, seed_item.crop):
 				GameState.inventory.remove_from_slot(GameState.selected_slot, 1)
+				Audio.play(&"plant")
 				EventBus.report(&"crop_planted", _player, where, {"crop": seed_item.crop.id})
 
 
 ## Plays a tool animation toward `cell`. `effect` runs when the tool lands.
-## `chips` colours the burst thrown up on impact.
+## `start_sound` is the cue played as the motion begins; left out, it is the
+## tool's own. `chips` colours the burst thrown up on impact.
 func _use_tool(
 	grid: FarmGrid,
 	cell: Vector2i,
 	motion: ToolData.UseAnimation,
 	effect: Callable,
+	start_sound: StringName = &"",
 	chips: Color = PlayerToolAnimator.DIRT_COLOR,
 ) -> void:
 	var tool_item := _held_tool()
+	Audio.play(start_sound if start_sound != &"" else tool_item.start_sound)
 	# One of eight directions; the tile underfoot uses wherever we already face.
 	var offset := cell - grid.cell_at(_player.global_position)
 	var direction := Vector2(offset).normalized() if offset != Vector2i.ZERO else _player.facing
@@ -133,6 +138,12 @@ func _use_tool(
 	_player.face(direction)
 	await _animator.play(motion, tool_item.icon, direction, grid.cell_center(cell), effect, chips)
 	_player.busy = false
+
+
+func _till(grid: FarmGrid, cell: Vector2i) -> void:
+	var stack := GameState.selected_stack()
+	if grid.till(cell) and stack != null and stack.item is ToolData:
+		Audio.play((stack.item as ToolData).use_sound)
 
 
 func _pour_water(grid: FarmGrid, cell: Vector2i) -> void:
@@ -156,8 +167,12 @@ func _refill_can() -> void:
 ## over whatever it drops.
 func _hit_debris(grid: FarmGrid, cell: Vector2i) -> void:
 	var debris := grid.debris_at(cell)
-	if debris == null or not grid.hit_debris(cell):
+	if debris == null:
 		return
+	if not grid.hit_debris(cell):
+		Audio.play(debris.hit_sound)
+		return
+	Audio.play(debris.break_sound)
 	var amount := randi_range(debris.drop_min, debris.drop_max)
 	if debris.drop_item != null and amount > 0:
 		GameState.inventory.add_item(debris.drop_item, amount)
@@ -182,9 +197,11 @@ func _harvest(grid: FarmGrid, cell: Vector2i, where: Vector2) -> void:
 	# Check for room first so a full bag never destroys a harvest.
 	if not GameState.inventory.can_fit(crop.harvest_item, crop.harvest_max):
 		EventBus.toast_requested.emit("Your bag is full.")
+		Audio.play(&"error")
 		return
 	var picked := grid.harvest(cell)
 	GameState.inventory.add_item(picked.item, picked.count)
+	Audio.play(&"harvest")
 	EventBus.toast_requested.emit("+%d %s" % [picked.count, picked.item.display_name])
 	EventBus.report(&"crop_harvested", _player, where, {"crop": crop.id, "count": picked.count})
 
@@ -199,12 +216,16 @@ func _explain_if_useless(cell: Vector2i) -> void:
 	if tool_item == null:
 		return
 	var debris := grid.debris_at(cell)
+	var reason := ""
 	if tool_item.tool_type == ToolData.ToolType.WATERING_CAN and grid.can_water(cell) and not _has_charge(stack):
-		EventBus.toast_requested.emit("The can is empty. Fill it at the river.")
+		reason = "The can is empty. Fill it at the river."
 	elif debris != null and debris.tool != tool_item.tool_type:
-		EventBus.toast_requested.emit("%s: use the %s." % [debris.display_name, _tool_name(debris.tool)])
+		reason = "%s: use the %s." % [debris.display_name, _tool_name(debris.tool)]
 	elif debris != null and not _has_room_for(debris):
-		EventBus.toast_requested.emit("Your bag is full.")
+		reason = "Your bag is full."
+	if reason != "":
+		EventBus.toast_requested.emit(reason)
+		Audio.play(&"error")
 
 
 ## "pickaxe", "watering can": the enum name in plain words.
