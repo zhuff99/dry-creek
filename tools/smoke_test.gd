@@ -22,6 +22,8 @@ const BANK_CELL := Vector2i(13, 4)
 const RIVER_CELL := Vector2i(13, 3)
 ## Real seconds before the run gives up.
 const WATCHDOG_SECONDS := 90.0
+## The tile in front of the cabin door, where a new game begins.
+const CABIN_DOOR_CELL := Vector2i(8, 14)
 ## Every sound cue the playthrough should set off at least once.
 const EXPECTED_SOUNDS: Array[StringName] = [
 	&"swing", &"till", &"pour", &"refill", &"plant", &"harvest",
@@ -82,17 +84,26 @@ func _run() -> void:
 	await create_timer(1.5).timeout
 	var river_db_at_cabin := river_sound.volume_db
 
-	# --- Movement and collision: walk left from spawn into the cabin wall.
-	var start_x := player.global_position.x
+	# --- Movement and collision: walk left, then up into the cabin's wall.
+	var cabin: Node2D = main.get_node("World/Farm/Entities/Cabin")
+	var door_spot := player.global_position
+	_check(grid.cell_at(door_spot) == CABIN_DOOR_CELL, "the game starts at the cabin door")
 	Input.action_press(&"move_left")
-	await _physics_frames(120)
+	await _physics_frames(20)
 	Input.action_release(&"move_left")
-	_check(player.global_position.x < start_x, "player moves left")
-	_check(player.global_position.x > 100.0, "cabin wall stops the player (x=%.1f)" % player.global_position.x)
+	_check(player.global_position.x < door_spot.x, "player moves left")
+	Input.action_press(&"move_up")
+	await _physics_frames(120)
+	Input.action_release(&"move_up")
+	_check(player.global_position.y > cabin.global_position.y,
+			"the cabin stops the player (y=%.1f)" % player.global_position.y)
+	player.global_position = door_spot
+	await _physics_frames(2)
 
 	# --- Tilling rules.
 	_check(grid.can_till(CORN_CELLS[0]), "open dirt can be tilled")
-	_check(not grid.can_till(Vector2i(8, 12)), "cabin floor cannot be tilled")
+	_check(not grid.can_till(Vector2i(8, 12)), "the ground under the cabin cannot be tilled")
+	_check(not grid.can_till(CABIN_DOOR_CELL), "nor can the doorstep")
 	_check(not grid.can_till(RIVER_CELL), "water cannot be tilled")
 	var debris := objects.get_used_cells()
 	_check(debris.size() > 60, "rocks, trees and brush are scattered around (%d)" % debris.size())
@@ -123,8 +134,15 @@ func _run() -> void:
 	await _shot("02_planted_and_watered")
 
 	# --- A watered night grows crops; a dry night does not.
-	await _sleep()
-	_check(_clock.day == 2, "sleeping advances to day 2")
+	# The first night goes through the cabin door with the real interact key.
+	player.global_position = door_spot
+	await _physics_frames(3)
+	_press(&"interact")
+	await _frames(3)
+	_release(&"interact")
+	while paused:
+		await process_frame
+	_check(_clock.day == 2, "using the cabin door sleeps until day 2")
 	_check(_state.farm.get_plot(CORN_CELLS[0]).days_grown == 1, "watered crop grew one day")
 	_check(not _state.farm.get_plot(CORN_CELLS[0]).watered, "soil dries overnight")
 	await _sleep()

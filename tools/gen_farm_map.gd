@@ -1,6 +1,6 @@
 extends SceneTree
 ## Dev tool: builds the farm TileSet and the starting farm map from the Ninja
-## Adventure pack (plus the two recoloured images in assets/derived).
+## Adventure pack (plus the recoloured images in assets/derived).
 ##
 ## Run from the project folder, after the images are imported:
 ##   godot --headless --path . -s res://tools/gen_farm_map.gd
@@ -18,22 +18,14 @@ const MAP_PATH := "res://scenes/world/farm_map.tscn"
 
 const TILE := Vector2i(16, 16)
 const MAP_SIZE := Vector2i(48, 32)
-const NONE := Vector2i(-1, -1)
 ## Alternative tile id used for the copies that behave differently: solid
 ## ground under the border, and border trees that cannot be chopped.
 const ALT := 1
+## Alternative ground that can be walked on but not tilled: the earth under
+## and in front of the cabin, and under the yard's furniture.
+const PACKED := 2
 
 # --- atlas coordinates -------------------------------------------------------
-const PLANK_FLOOR := Vector2i(1, 13)
-# Cabin walls: a 5x5 ring, corners and one edge piece per side.
-const WALL_TL := Vector2i(0, 0)
-const WALL_T := Vector2i(1, 0)
-const WALL_TR := Vector2i(4, 0)
-const WALL_L := Vector2i(0, 1)
-const WALL_R := Vector2i(4, 1)
-const WALL_BL := Vector2i(0, 4)
-const WALL_B := Vector2i(1, 4)
-const WALL_BR := Vector2i(4, 4)
 # TilesetNature.png. Trees are bigger than one cell.
 const TREES: Array[Vector2i] = [Vector2i(0, 0), Vector2i(2, 0), Vector2i(6, 0), Vector2i(16, 0)]
 const DEAD_TREE := Vector2i(4, 0)
@@ -59,10 +51,38 @@ const BONES: Array[Vector2i] = [Vector2i(13, 0), Vector2i(14, 0)]
 const RIPPLE := Vector2i(0, 0)
 const RIPPLE_FRAMES := 4
 
+# --- homestead furniture -----------------------------------------------------
+# Things a frontier yard has. They stand on the Objects layer like trees do,
+# but they are not debris: no tool clears them.
+# Each: atlas source, atlas coordinates, size in cells, the box that blocks the
+# player (measured from the centre of the cell it stands on), and the map
+# cell. Art wider than a cell is centred on its cell.
+const PROPS: Array[Dictionary] = [
+	{"what": "woodpile", "src": Tiles.SRC_CAMP, "at": Vector2i(0, 1), "cells": Vector2i(1, 2),
+		"box": Rect2(-7, -2, 14, 9), "cell": Vector2i(4, 13)},
+	{"what": "chopping block", "src": Tiles.SRC_CAMP, "at": Vector2i(1, 5), "cells": Vector2i(2, 2),
+		"box": Rect2(-12, -4, 24, 11), "cell": Vector2i(4, 11)},
+	{"what": "lantern post", "src": Tiles.SRC_CAMP, "at": Vector2i(6, 5), "cells": Vector2i(1, 2),
+		"box": Rect2(-7, 2, 5, 5), "cell": Vector2i(6, 14)},
+	{"what": "rain barrel", "src": Tiles.SRC_CAMP, "at": Vector2i(4, 5), "cells": Vector2i(1, 1),
+		"box": Rect2(-6, -1, 12, 8), "cell": Vector2i(10, 14)},
+	{"what": "hay", "src": Tiles.SRC_CAMP, "at": Vector2i(0, 3), "cells": Vector2i(1, 2),
+		"box": Rect2(-7, -2, 14, 9), "cell": Vector2i(15, 14)},
+	{"what": "hitching rail", "src": Tiles.SRC_ELEMENT, "at": Vector2i(11, 2), "cells": Vector2i(3, 2),
+		"box": Rect2(-20, 2, 40, 5), "cell": Vector2i(5, 16)},
+	{"what": "clothesline", "src": Tiles.SRC_ELEMENT, "at": Vector2i(14, 2), "cells": Vector2i(2, 2),
+		"box": Rect2(-14, 3, 28, 4), "cell": Vector2i(4, 8)},
+	{"what": "scarecrow", "src": Tiles.SRC_ELEMENT, "at": Vector2i(15, 0), "cells": Vector2i(1, 1),
+		"box": Rect2(-3, 2, 6, 5), "cell": Vector2i(16, 15)},
+]
+
 # --- map regions, in cells ---------------------------------------------------
 const RIVER_WIDTH := 3
-const CABIN := Rect2i(5, 9, 7, 6)
-const CABIN_DOOR := Vector2i(8, 14)
+## The ground the cabin stands on. The cabin itself is a scene placed in
+## farm.tscn (scenes/objects/cabin.tscn), not tiles.
+const CABIN := Rect2i(6, 12, 5, 2)
+## The trodden strip in front of its door.
+const DOORYARD := Rect2i(7, 14, 3, 1)
 ## Areas kept free of rocks, trees and brush so the start of the game is not
 ## blocked: around the cabin, the yard with the shipping crate, the first
 ## field, and a trail north to the river.
@@ -124,11 +144,11 @@ func _build_tileset() -> TileSet:
 	var soil := _add_source(tile_set, Tiles.SRC_SOIL, "res://assets/derived/soil_dry.png")
 	var wet := _add_source(tile_set, Tiles.SRC_WET_SOIL, "res://assets/derived/soil_wet.png")
 	var nature := _add_source(tile_set, Tiles.SRC_NATURE, PACK + "TilesetNature.png")
-	var wall := _add_source(tile_set, Tiles.SRC_WALL, "res://assets/derived/cabin_walls.png")
-	var plank := _add_source(tile_set, Tiles.SRC_PLANK, PACK + "TilesetWater.png")
+	var camp := _add_source(tile_set, Tiles.SRC_CAMP, PACK + "tileset_camp.png")
+	var element := _add_source(tile_set, Tiles.SRC_ELEMENT, PACK + "TilesetElement.png")
 	var detail := _add_source(tile_set, Tiles.SRC_DETAIL, PACK + "TilesetFloorDetail.png")
 	var ripple := _add_source(tile_set, Tiles.SRC_RIPPLE, PACK + "WaterRipples.png")
-	for source: TileSetAtlasSource in [floor_source, water, soil, wet, nature, wall, plank, detail, ripple]:
+	for source: TileSetAtlasSource in [floor_source, water, soil, wet, nature, camp, element, detail, ripple]:
 		if source == null:
 			return null
 
@@ -141,6 +161,8 @@ func _build_tileset() -> TileSet:
 		floor_source.get_tile_data(coords, 0).set_custom_data("tillable", true)
 	floor_source.create_alternative_tile(Tiles.GROUND[0], ALT)
 	_add_collision(floor_source.get_tile_data(Tiles.GROUND[0], ALT), full_tile)
+	# A second twin that is only untillable (alternatives start with no data).
+	floor_source.create_alternative_tile(Tiles.GROUND[0], PACKED)
 
 	# Tilled soil, watered soil and the river: one tile per blob piece.
 	for row: int in Blob.LAYOUT.size():
@@ -156,11 +178,14 @@ func _build_tileset() -> TileSet:
 			water_data.set_custom_data("water", true)
 			_add_collision(water_data, _water_shape(mask))
 
-	# Cabin.
-	plank.create_tile(PLANK_FLOOR)
-	for coords: Vector2i in [WALL_TL, WALL_T, WALL_TR, WALL_L, WALL_R, WALL_BL, WALL_B, WALL_BR]:
-		wall.create_tile(coords)
-		_add_collision(wall.get_tile_data(coords, 0), full_tile)
+	# Yard furniture.
+	for prop: Dictionary in PROPS:
+		var source: TileSetAtlasSource = camp if prop.src == Tiles.SRC_CAMP else element
+		source.create_tile(prop.at, prop.cells)
+		var data := source.get_tile_data(prop.at, 0)
+		_place_tall(data, prop.cells)
+		var box: Rect2 = prop.box
+		_add_collision(data, _box(box.position.x, box.position.y, box.end.x, box.end.y))
 
 	# Ground litter and the animated ripple: decoration only.
 	for coords: Vector2i in DETAILS + BONES:
@@ -267,7 +292,6 @@ func _build_map(tile_set: TileSet) -> Error:
 	# Empty overlays that FarmGrid paints tilled and watered soil onto.
 	_add_layer(root, "Soil", tile_set)
 	_add_layer(root, "Wet", tile_set)
-	var walls := _add_layer(root, "Walls", tile_set)
 	var objects := _add_layer(root, "Objects", tile_set)
 	objects.z_index = 0
 	objects.y_sort_enabled = true
@@ -286,18 +310,24 @@ func _build_map(tile_set: TileSet) -> Error:
 				ground.set_cell(cell, Tiles.SRC_FLOOR, Tiles.GROUND[0], ALT)
 				if (x + y) % 2 == 0:
 					objects.set_cell(cell, Tiles.SRC_NATURE, TREES[rng.randi() % TREES.size()], ALT)
-			elif CABIN.has_point(cell):
-				# Wall pieces carry their own strip of floor, so they stand on
-				# dirt; only the room itself is planked.
-				var wall_tile := _wall_tile(cell)
-				if wall_tile == NONE:
-					ground.set_cell(cell, Tiles.SRC_PLANK, PLANK_FLOOR)
-				else:
-					ground.set_cell(cell, Tiles.SRC_FLOOR, Tiles.GROUND[0])
-					walls.set_cell(cell, Tiles.SRC_WALL, wall_tile)
+			elif CABIN.has_point(cell) or DOORYARD.has_point(cell):
+				ground.set_cell(cell, Tiles.SRC_FLOOR, Tiles.GROUND[0], PACKED)
 			else:
 				ground.set_cell(cell, Tiles.SRC_FLOOR, _ground_tile(rng))
 				_scatter(cell, rng, decor, objects)
+
+	for prop: Dictionary in PROPS:
+		var base: Vector2i = prop.cell
+		objects.set_cell(base, prop.src, prop.at)
+		# Wide art hangs over the cells beside it; none of that ground is
+		# for planting, and nothing else should be lying there.
+		var reach: int = prop.cells.x / 2
+		for x: int in range(base.x - reach, base.x + reach + 1):
+			var under := Vector2i(x, base.y)
+			ground.set_cell(under, Tiles.SRC_FLOOR, Tiles.GROUND[0], PACKED)
+			decor.erase_cell(under)
+			if under != base:
+				objects.erase_cell(under)
 
 	var scene := PackedScene.new()
 	var err := scene.pack(root)
@@ -351,25 +381,6 @@ func _ground_tile(rng: RandomNumberGenerator) -> Vector2i:
 	if rng.randf() < 0.8:
 		return Tiles.GROUND[0]
 	return Tiles.GROUND[1 + rng.randi() % (Tiles.GROUND.size() - 1)]
-
-
-## Which wall piece a cabin cell gets, or NONE for the floor and the doorway.
-func _wall_tile(cell: Vector2i) -> Vector2i:
-	if cell == CABIN_DOOR:
-		return NONE
-	var left := cell.x == CABIN.position.x
-	var right := cell.x == CABIN.end.x - 1
-	var top := cell.y == CABIN.position.y
-	var bottom := cell.y == CABIN.end.y - 1
-	if top:
-		return WALL_TL if left else (WALL_TR if right else WALL_T)
-	if bottom:
-		return WALL_BL if left else (WALL_BR if right else WALL_B)
-	if left:
-		return WALL_L
-	if right:
-		return WALL_R
-	return NONE
 
 
 ## Decides what, if anything, lies or grows on an open ground cell.

@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
-[ext_resource type="Texture2D" path="res://assets/ninja_adventure/characters/inspector/Walk.png" id="2_sprite"]
+[ext_resource type="Texture2D" path="res://assets/derived/cowboy_walk.png" id="2_sprite"]
 [ext_resource type="Texture2D" path="res://assets/ninja_adventure/characters/Shadow.png" id="7_shadow"]
 [ext_resource type="Script" path="res://scripts/player/player_item_user.gd" id="3_item_user"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/ui/tile_cursor.png" id="4_cursor"]

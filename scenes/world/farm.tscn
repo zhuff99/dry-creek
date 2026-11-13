@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/world/farm.gd" id="1_farm"]
 [ext_resource type="PackedScene" path="res://scenes/world/farm_map.tscn" id="2_map"]
 [ext_resource type="Script" path="res://scripts/farming/farm_grid.gd" id="3_grid"]
-[ext_resource type="PackedScene" path="res://scenes/objects/bed.tscn" id="4_bed"]
+[ext_resource type="PackedScene" path="res://scenes/objects/cabin.tscn" id="4_cabin"]
 [ext_resource type="PackedScene" path="res://scenes/objects/shipping_crate.tscn" id="5_crate"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="6_player"]
 [ext_resource type="Script" path="res://scripts/world/water_ambience.gd" id="7_water"]
@@ -26,14 +26,14 @@ crop_parent = NodePath("../Entities")
 [node name="Entities" type="Node2D" parent="."]
 y_sort_enabled = true
 
-[node name="Bed" parent="Entities" instance=ExtResource("4_bed")]
-position = Vector2(104, 176)
+[node name="Cabin" parent="Entities" instance=ExtResource("4_cabin")]
+position = Vector2(136, 224)
 
 [node name="ShippingCrate" parent="Entities" instance=ExtResource("5_crate")]
 position = Vector2(216, 248)
 
 [node name="Player" parent="Entities" instance=ExtResource("6_player")]
-position = Vector2(136, 204)
+position = Vector2(136, 236)
 
 [node name="RiverSound" type="AudioStreamPlayer" parent="." node_paths=PackedStringArray("farm_grid", "listener")]
 stream = ExtResource("8_river")

@@ -10,9 +10,14 @@ extends SceneTree
 ## - soil_dry.png / soil_wet.png: the pack's soil is only a shade darker than
 ##   its dirt, which is too faint to farm by. These are the same block with the
 ##   two soil colours deepened, and deepened further for watered plots.
-## - cabin_walls.png: the wall ring is drawn on a black backdrop meant for
-##   indoor rooms, with nothing inside it. This is the ring with the backdrop
-##   outside removed and the plank floor laid inside, so it can stand on dirt.
+## - cowboy_walk.png: the pack has no cowboy. Its "Inspector" already wears a
+##   wide-brimmed hat, a neckerchief and a long coat, so this is him with the
+##   white fedora turned into a tan hat with a dark band and the trench coat
+##   into a blue work shirt.
+## - log_cabin.png: the pack's buildings are Japanese houses. The homestead
+##   cabin is drawn from scratch in the pack's colours by cabin_painter.gd.
+
+const CabinPainter := preload("res://tools/cabin_painter.gd")
 
 const T := 16
 const BLOB_BLOCK := Vector2i(11, 5)
@@ -32,6 +37,19 @@ const WET_SOIL_SWAPS := {
 	"816855ff": Color("463426"),
 }
 
+const INSPECTOR_WALK := "res://assets/ninja_adventure/characters/inspector/Walk.png"
+## The hat is the top eight rows of the figure in every frame.
+const HAT_ROWS := 8
+const HAT_SWAPS := {
+	"f2eaf1ff": Color("e0b877"),  # white felt -> tan
+	"abc2bcff": Color("b98b55"),  # its shading
+	"a3754eff": Color("5a3a2a"),  # hat band
+}
+const CLOTHES_SWAPS := {
+	"a3754eff": Color("5b7186"),  # brown coat -> blue shirt
+	"91522cff": Color("465a6e"),  # its shading
+}
+
 
 func _init() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
@@ -46,11 +64,8 @@ func _init() -> void:
 	_swap_colours(wet, WET_SOIL_SWAPS)
 	_save(wet, "soil_wet.png")
 
-	# The orange wall ring is the 5x5 block starting at column 5.
-	var walls := _cut(PACK + "TilesetWallSimple.png", Vector2i(5, 0), Vector2i(5, 5))
-	_fill_empty(walls, _cut(PACK + "TilesetWater.png", Vector2i(1, 13), Vector2i.ONE))
-	_clear_backdrop(walls)
-	_save(walls, "cabin_walls.png")
+	_save(_cowboy(), "cowboy_walk.png")
+	_save(CabinPainter.paint(), "log_cabin.png")
 	print("Derived art written to ", OUT)
 	quit()
 
@@ -73,35 +88,33 @@ func _swap_colours(img: Image, swaps: Dictionary) -> void:
 				img.set_pixel(x, y, swaps[key])
 
 
-## Paints the repeating `tile` into every fully see-through pixel.
-func _fill_empty(img: Image, tile: Image) -> void:
-	for y: int in img.get_height():
-		for x: int in img.get_width():
-			if img.get_pixel(x, y).a == 0.0:
-				img.set_pixel(x, y, tile.get_pixel(x % T, y % T))
+## The Inspector's walk sheet in ranch clothes. The hat and the coat share a
+## brown, so which swap applies depends on whether a pixel is in the hat.
+func _cowboy() -> Image:
+	var sheet := Image.load_from_file(ProjectSettings.globalize_path(INSPECTOR_WALK))
+	sheet.convert(Image.FORMAT_RGBA8)
+	for frame_y: int in sheet.get_height() / T:
+		for frame_x: int in sheet.get_width() / T:
+			var frame := Rect2i(frame_x * T, frame_y * T, T, T)
+			# The figure bobs a pixel as it walks, so find where its hat starts.
+			var top := 0
+			while top < T and _row_is_empty(sheet, frame, top):
+				top += 1
+			for y: int in T:
+				var swaps: Dictionary = HAT_SWAPS if y < top + HAT_ROWS else CLOTHES_SWAPS
+				for x: int in T:
+					var at := frame.position + Vector2i(x, y)
+					var key := sheet.get_pixelv(at).to_html(true)
+					if swaps.has(key):
+						sheet.set_pixelv(at, swaps[key])
+	return sheet
 
 
-## Makes the backdrop see-through: every pixel of the corner's colour that can
-## be reached from the edge of the image without crossing another colour.
-func _clear_backdrop(img: Image) -> void:
-	var backdrop := img.get_pixel(0, 0)
-	var size := img.get_size()
-	var queue: Array[Vector2i] = []
-	for x: int in size.x:
-		queue.append(Vector2i(x, 0))
-		queue.append(Vector2i(x, size.y - 1))
-	for y: int in size.y:
-		queue.append(Vector2i(0, y))
-		queue.append(Vector2i(size.x - 1, y))
-	while not queue.is_empty():
-		var at: Vector2i = queue.pop_back()
-		if at.x < 0 or at.y < 0 or at.x >= size.x or at.y >= size.y:
-			continue
-		if not img.get_pixelv(at).is_equal_approx(backdrop):
-			continue
-		img.set_pixelv(at, Color(0, 0, 0, 0))
-		for step: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			queue.append(at + step)
+func _row_is_empty(img: Image, frame: Rect2i, y: int) -> bool:
+	for x: int in frame.size.x:
+		if img.get_pixel(frame.position.x + x, frame.position.y + y).a > 0.0:
+			return false
+	return true
 
 
 func _save(img: Image, file_name: String) -> void:

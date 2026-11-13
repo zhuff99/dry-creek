@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bf3swa1hibbun"
-path="res://.godot/imported/tileset_bed.png-5c3807cbe87e741222f990c31db75d40.ctex"
+uid="uid://b4hqqtwu0b76k"
+path="res://.godot/imported/cowboy_walk.png-fb177b4bc90076430639324d78cf5fae.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ninja_adventure/tilesets/tileset_bed.png"
-dest_files=["res://.godot/imported/tileset_bed.png-5c3807cbe87e741222f990c31db75d40.ctex"]
+source_file="res://assets/derived/cowboy_walk.png"
+dest_files=["res://.godot/imported/cowboy_walk.png-fb177b4bc90076430639324d78cf5fae.ctex"]
 
 [params]
 
