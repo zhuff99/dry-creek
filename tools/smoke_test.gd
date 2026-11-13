@@ -6,12 +6,16 @@ extends SceneTree
 ##
 ## Exit code is the number of failed checks.
 
-const CORN_CELLS: Array[Vector2i] = [Vector2i(17, 10), Vector2i(18, 10), Vector2i(19, 10)]
-const BEAN_CELLS: Array[Vector2i] = [Vector2i(17, 12), Vector2i(18, 12), Vector2i(19, 12)]
+const CORN_CELLS: Array[Vector2i] = [Vector2i(17, 17), Vector2i(18, 17), Vector2i(19, 17)]
+const BEAN_CELLS: Array[Vector2i] = [Vector2i(17, 19), Vector2i(18, 19), Vector2i(19, 19)]
 const HOE_SLOT := 0
 const CAN_SLOT := 1
 const CORN_SEED_SLOT := 2
 const BEAN_SEED_SLOT := 3
+const CAN_CAPACITY := 20
+## Where the trail from the cabin meets the river.
+const BANK_CELL := Vector2i(13, 4)
+const RIVER_CELL := Vector2i(13, 3)
 ## Real seconds before the run gives up.
 const WATCHDOG_SECONDS := 90.0
 
@@ -55,6 +59,7 @@ func _run() -> void:
 	var grid: Node = main.get_node("World/Farm/FarmGrid")
 	var crate: Node2D = main.get_node("World/Farm/Entities/ShippingCrate")
 	var panel: Control = main.get_node("UI/InventoryPanel")
+	var objects: TileMapLayer = main.get_node("World/Farm/Map/Objects")
 	await _shot("01_start")
 
 	# --- Movement and collision: walk left from spawn into the cabin wall.
@@ -66,11 +71,16 @@ func _run() -> void:
 	_check(player.global_position.x > 100.0, "cabin wall stops the player (x=%.1f)" % player.global_position.x)
 
 	# --- Tilling rules.
-	_check(not grid.can_till(Vector2i(14, 9)), "sand cannot be tilled")
-	_check(grid.can_till(CORN_CELLS[0]), "field dirt can be tilled")
+	_check(grid.can_till(CORN_CELLS[0]), "open dirt can be tilled")
+	_check(not grid.can_till(Vector2i(8, 12)), "cabin floor cannot be tilled")
+	_check(not grid.can_till(RIVER_CELL), "water cannot be tilled")
+	_check(not grid.can_till(BANK_CELL), "the river bank cannot be tilled")
+	var debris := objects.get_used_cells()
+	_check(debris.size() > 60, "rocks, trees and brush are scattered around (%d)" % debris.size())
+	_check(not grid.can_till(debris[0]), "a tile with something on it cannot be tilled")
 
 	# --- Till, plant, water.
-	player.global_position = grid.cell_center(Vector2i(18, 11)) + Vector2(0, 4)
+	player.global_position = grid.cell_center(Vector2i(18, 18)) + Vector2(0, 4)
 	await _physics_frames(3)
 	var all_cells: Array[Vector2i] = []
 	all_cells.append_array(CORN_CELLS)
@@ -162,7 +172,7 @@ func _run() -> void:
 	_check(not panel.visible and not paused, "backpack closes and unpauses")
 
 	# --- Clicking uses the selected item on the targeted tile.
-	player.global_position = grid.cell_center(Vector2i(24, 14)) + Vector2(0, 4)
+	player.global_position = grid.cell_center(Vector2i(24, 21)) + Vector2(0, 4)
 	_state.select_slot(HOE_SLOT)
 	await _frames(3)
 	var target: Vector2i = item_user.target_cell
@@ -178,7 +188,7 @@ func _run() -> void:
 
 	# --- Tool animations, at real speed so the screenshots catch them mid-move.
 	Engine.time_scale = 1.0
-	var stand := Vector2i(26, 11)
+	var stand := Vector2i(26, 18)
 	player.global_position = grid.cell_center(stand) + Vector2(0, 4)
 	await _physics_frames(2)
 	var locked_at := player.global_position
@@ -205,6 +215,7 @@ func _run() -> void:
 	await _until_idle(player)
 
 	_state.select_slot(CAN_SLOT)
+	_state.inventory.set_charge(CAN_SLOT, CAN_CAPACITY)
 	item_user.use_item_at(stand + Vector2i.RIGHT)
 	await create_timer(0.3).timeout
 	await _shot("12_watering_right")
@@ -220,12 +231,40 @@ func _run() -> void:
 	await _until_idle(player)
 	_check(not player.busy and not player.get_node("ToolAnimator/HeldTool").visible, "tool is put away afterwards")
 
+	# --- The watering can runs dry and is filled at the river.
+	_check(_state.inventory.get_slot(CAN_SLOT).charge == CAN_CAPACITY - 3, "each watering uses one unit of water")
+	_state.select_slot(HOE_SLOT)
+	await item_user.use_item_at(stand + Vector2i.DOWN)
+	_state.select_slot(CAN_SLOT)
+	_state.inventory.set_charge(CAN_SLOT, 0)
+	await item_user.use_item_at(stand + Vector2i.DOWN)
+	_check(not _state.farm.get_plot(stand + Vector2i.DOWN).watered, "an empty can does not water")
+	await _shot("15_field_and_brush")
+
+	player.global_position = grid.cell_center(BANK_CELL) + Vector2(0, 4)
+	await _physics_frames(3)
+	_check(grid.is_water(RIVER_CELL), "the river is water")
+	Input.action_press(&"move_up")
+	await _physics_frames(60)
+	Input.action_release(&"move_up")
+	_check(grid.cell_at(player.global_position) == BANK_CELL, "the river cannot be walked into")
+	item_user.use_item_at(RIVER_CELL)
+	await create_timer(0.25).timeout
+	await _shot("16_filling_can")
+	await _until_idle(player)
+	_check(_state.inventory.get_slot(CAN_SLOT).charge == CAN_CAPACITY, "the can fills at the river")
+	await item_user.use_item_at(RIVER_CELL)
+	_check(not player.busy, "a full can does not refill again")
+	Engine.time_scale = 3.0
+
 	print("\nSMOKE TEST: %s (%d failed)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(_failures)
 
 
 func _water(item_user: Node, cells: Array[Vector2i]) -> void:
 	_state.select_slot(CAN_SLOT)
+	# Shortcut: top the can up here so the growing checks do not need a river trip.
+	_state.inventory.set_charge(CAN_SLOT, CAN_CAPACITY)
 	for cell: Vector2i in cells:
 		await item_user.use_item_at(cell)
 

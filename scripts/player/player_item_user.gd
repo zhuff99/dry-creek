@@ -5,7 +5,7 @@ extends Node2D
 ## player. A cursor shows it: bright when the click would do something.
 ## Holding the button keeps working, one use after another.
 
-enum Action { NONE, HARVEST, TILL, WATER, PLANT }
+enum Action { NONE, HARVEST, TILL, WATER, REFILL, PLANT }
 
 ## How many tiles away from the player a tile can be targeted.
 const REACH := 1
@@ -48,6 +48,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"primary_action"):
 		# Only clicks that reach the world count; clicks on UI never get here.
 		_primary_held = true
+		_explain_if_useless(target_cell)
 		use_item_at(target_cell)
 	elif event.is_action_pressed(&"hotbar_next"):
 		GameState.select_slot(GameState.selected_slot + 1)
@@ -76,7 +77,10 @@ func action_at(cell: Vector2i) -> Action:
 			ToolData.ToolType.HOE:
 				return Action.TILL if grid.can_till(cell) else Action.NONE
 			ToolData.ToolType.WATERING_CAN:
-				return Action.WATER if grid.can_water(cell) else Action.NONE
+				if grid.is_water(cell):
+					return Action.REFILL if stack.charge < stack.capacity() else Action.NONE
+				if grid.can_water(cell) and _has_charge(stack):
+					return Action.WATER
 	elif stack.item is SeedData:
 		return Action.PLANT if grid.can_plant(cell) else Action.NONE
 	return Action.NONE
@@ -93,9 +97,11 @@ func use_item_at(cell: Vector2i) -> void:
 		Action.HARVEST:
 			_harvest(grid, cell, where)
 		Action.TILL:
-			await _use_tool(grid, cell, grid.till.bind(cell))
+			await _use_tool(grid, cell, _held_tool().use_animation, grid.till.bind(cell))
 		Action.WATER:
-			await _use_tool(grid, cell, grid.water.bind(cell))
+			await _use_tool(grid, cell, _held_tool().use_animation, _pour_water.bind(grid, cell))
+		Action.REFILL:
+			await _use_tool(grid, cell, ToolData.UseAnimation.DIP, _refill_can)
 		Action.PLANT:
 			var seed_item := GameState.selected_stack().item as SeedData
 			if grid.plant(cell, seed_item.crop):
@@ -103,16 +109,33 @@ func use_item_at(cell: Vector2i) -> void:
 				EventBus.report(&"crop_planted", _player, where, {"crop": seed_item.crop.id})
 
 
-## Plays the held tool's animation toward `cell`. `effect` runs when it lands.
-func _use_tool(grid: FarmGrid, cell: Vector2i, effect: Callable) -> void:
-	var tool_item := GameState.selected_stack().item as ToolData
+## Plays a tool animation toward `cell`. `effect` runs when the tool lands.
+func _use_tool(grid: FarmGrid, cell: Vector2i, motion: ToolData.UseAnimation, effect: Callable) -> void:
+	var tool_item := _held_tool()
 	# One of eight directions; the tile underfoot uses wherever we already face.
 	var offset := cell - grid.cell_at(_player.global_position)
 	var direction := Vector2(offset).normalized() if offset != Vector2i.ZERO else _player.facing
 	_player.busy = true
 	_player.face(direction)
-	await _animator.play(tool_item.use_animation, tool_item.icon, direction, grid.cell_center(cell), effect)
+	await _animator.play(motion, tool_item.icon, direction, grid.cell_center(cell), effect)
 	_player.busy = false
+
+
+func _pour_water(grid: FarmGrid, cell: Vector2i) -> void:
+	var stack := GameState.selected_stack()
+	# The player may have switched items mid-animation; only a can pours.
+	if stack == null or not _has_charge(stack) or not grid.water(cell):
+		return
+	if stack.capacity() > 0:
+		GameState.inventory.set_charge(GameState.selected_slot, stack.charge - 1)
+
+
+func _refill_can() -> void:
+	var stack := GameState.selected_stack()
+	if stack == null or stack.capacity() <= 0:
+		return
+	GameState.inventory.set_charge(GameState.selected_slot, stack.capacity())
+	EventBus.toast_requested.emit("%s filled." % stack.item.display_name)
 
 
 func _harvest(grid: FarmGrid, cell: Vector2i, where: Vector2) -> void:
@@ -125,6 +148,30 @@ func _harvest(grid: FarmGrid, cell: Vector2i, where: Vector2) -> void:
 	GameState.inventory.add_item(picked.item, picked.count)
 	EventBus.toast_requested.emit("+%d %s" % [picked.count, picked.item.display_name])
 	EventBus.report(&"crop_harvested", _player, where, {"crop": crop.id, "count": picked.count})
+
+
+## Says why a click did nothing, for the cases that are not obvious.
+func _explain_if_useless(cell: Vector2i) -> void:
+	var grid := _get_farm_grid()
+	var stack := GameState.selected_stack()
+	if grid == null or stack == null or action_at(cell) != Action.NONE:
+		return
+	var tool_item := stack.item as ToolData
+	if tool_item == null:
+		return
+	if tool_item.tool_type == ToolData.ToolType.WATERING_CAN and grid.can_water(cell) and not _has_charge(stack):
+		EventBus.toast_requested.emit("The can is empty. Fill it at the river.")
+	elif tool_item.tool_type == ToolData.ToolType.HOE and grid.is_tillable(cell) and grid.is_blocked(cell):
+		EventBus.toast_requested.emit("Something is growing or sitting there.")
+
+
+func _held_tool() -> ToolData:
+	return GameState.selected_stack().item as ToolData
+
+
+## True if the tool has uses left, or never runs out.
+func _has_charge(stack: ItemStack) -> bool:
+	return stack.capacity() <= 0 or stack.charge > 0
 
 
 func _holding_farm_item() -> bool:

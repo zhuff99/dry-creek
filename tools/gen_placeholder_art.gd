@@ -12,10 +12,12 @@ const OUT := "res://assets/placeholder/"
 
 const CLEAR := Color(0, 0, 0, 0)
 const OUTLINE := Color("2a1a10")
-const SAND := Color("d9b77c")
-const DIRT := Color("9c6b43")
-const TILLED := Color("7d5334")
-const WET := Color("54361f")
+const DIRT := Color("9a7048")
+const BANK := Color("745639")
+const WATER := Color("3f7fae")
+const STONE := Color("8d8478")
+const TILLED := Color("74492c")
+const WET := Color("4e311d")
 const ROCK := Color("7a5a48")
 const WOOD := Color("a8763f")
 const WALL := Color("5e3c26")
@@ -76,18 +78,28 @@ func _speckle(img: Image, ox: int, oy: int, base: Color, amount: int) -> void:
 
 # --- tiles -------------------------------------------------------------------
 
-## Atlas layout (column, row):
-##   row 0: sand, sand b, sand c, dirt (tillable), rock, wood floor, cabin wall
+## Atlas layout (column, row), in 16px cells:
+##   row 0: dirt a, dirt b, dirt c, river bank, cliff rock, wood floor, cabin wall
 ##   row 1: tilled soil, watered soil
+##   row 2: river water, 4 animation frames (flowing right to left)
+##   row 3: rock a, rock b, tree a top, tree b top, grass a, weed a
+##   row 4: weed b, grass b, tree a base, tree b base
+## Trees are 16x32 and take two cells.
 func _tiles() -> Image:
-	var img := _new(T * 8, T * 2)
-	# Three sand variants so large areas do not look tiled.
+	var img := _new(T * 8, T * 5)
+	# Three dirt variants so open ground does not look tiled.
 	for i: int in 3:
-		_rect(img, i * T, 0, T, T, SAND)
-		_speckle(img, i * T, 0, SAND, 6 + i * 5)
-	_rect(img, 3 * T, 0, T, T, DIRT)
-	_speckle(img, 3 * T, 0, DIRT, 12)
-	# Rock: lit top edge, shadowed bottom edge.
+		_rect(img, i * T, 0, T, T, DIRT)
+		_speckle(img, i * T, 0, DIRT, 8 + i * 4)
+	# Variant b: flecks of dry grass. Variant c: pebbles.
+	for p: Vector2i in [Vector2i(4, 5), Vector2i(11, 9), Vector2i(7, 13)]:
+		_rect(img, T + p.x, p.y, 1, 2, Color("8f9a45"))
+	for p: Vector2i in [Vector2i(3, 10), Vector2i(12, 4), Vector2i(9, 12)]:
+		_rect(img, 2 * T + p.x, p.y, 2, 1, STONE)
+	# River bank: damp mud.
+	_rect(img, 3 * T, 0, T, T, BANK)
+	_speckle(img, 3 * T, 0, BANK, 12)
+	# Cliff rock: lit top edge, shadowed bottom edge.
 	_rect(img, 4 * T, 0, T, T, ROCK)
 	_rect(img, 4 * T, 0, T, 3, ROCK.lightened(0.2))
 	_rect(img, 4 * T, T - 3, T, 3, ROCK.darkened(0.3))
@@ -107,7 +119,83 @@ func _tiles() -> Image:
 		_rect(img, i * T, T, T, T, soil)
 		for y: int in range(2, T, 4):
 			_rect(img, i * T + 1, T + y, T - 2, 1, soil.darkened(0.3))
+	# Water: ripple dashes move 4px left per frame, so the river flows west.
+	for frame: int in 4:
+		var ox := frame * T
+		_rect(img, ox, 2 * T, T, T, WATER)
+		_rect(img, ox, 2 * T + 8, T, 8, WATER.darkened(0.06))
+		for ripple: Vector2i in [Vector2i(2, 3), Vector2i(10, 7), Vector2i(5, 12)]:
+			for dx: int in 4:
+				var x := posmod(ripple.x - frame * 4 + dx, T)
+				img.set_pixel(ox + x, 2 * T + ripple.y, WATER.lightened(0.35))
+	_rock(img, 0, 3 * T, false)
+	_rock(img, T, 3 * T, true)
+	_tree(img, 2 * T, 3 * T, LEAF)
+	_tree(img, 3 * T, 3 * T, Color("6f8f3a"))
+	_grass(img, 4 * T, 3 * T, Color("8f9a45"))
+	_grass(img, T, 4 * T, Color("6f9440"))
+	_weed(img, 5 * T, 3 * T, false)
+	_weed(img, 0, 4 * T, true)
 	return img
+
+
+func _rock(img: Image, x: int, y: int, small: bool) -> void:
+	if small:
+		_rect(img, x + 2, y + 9, 7, 5, OUTLINE)
+		_rect(img, x + 3, y + 9, 5, 4, STONE)
+		_rect(img, x + 3, y + 9, 3, 1, STONE.lightened(0.25))
+		_rect(img, x + 9, y + 11, 5, 4, OUTLINE)
+		_rect(img, x + 10, y + 11, 3, 3, STONE.darkened(0.1))
+		return
+	_rect(img, x + 2, y + 6, 12, 9, OUTLINE)
+	_rect(img, x + 4, y + 5, 8, 1, OUTLINE)
+	_rect(img, x + 3, y + 6, 10, 8, STONE)
+	_rect(img, x + 4, y + 6, 5, 2, STONE.lightened(0.25))
+	_rect(img, x + 3, y + 11, 10, 3, STONE.darkened(0.2))
+	_rect(img, x + 8, y + 8, 1, 3, STONE.darkened(0.35))
+
+
+## 16x32: canopy in the top cell and a half, trunk reaching the bottom edge.
+func _tree(img: Image, x: int, y: int, leaf: Color) -> void:
+	_rect(img, x + 4, y + 30, 9, 2, Color(0, 0, 0, 0.25))  # ground shadow
+	_rect(img, x + 6, y + 18, 4, 13, Color("5b3a22"))  # trunk
+	_rect(img, x + 6, y + 18, 1, 13, Color("7a5230"))
+	_rect(img, x + 3, y + 3, 10, 18, OUTLINE)
+	_rect(img, x + 1, y + 6, 14, 12, OUTLINE)
+	_rect(img, x + 4, y + 4, 8, 16, leaf)
+	_rect(img, x + 2, y + 7, 12, 10, leaf)
+	_rect(img, x + 4, y + 5, 5, 3, leaf.lightened(0.2))
+	_rect(img, x + 3, y + 9, 3, 2, leaf.lightened(0.2))
+	_rect(img, x + 8, y + 13, 5, 3, leaf.darkened(0.2))
+	_rect(img, x + 5, y + 17, 6, 2, leaf.darkened(0.25))
+
+
+func _grass(img: Image, x: int, y: int, blade: Color) -> void:
+	# Blades as (column, height) pairs rising from the bottom of the cell.
+	for b: Vector2i in [Vector2i(3, 4), Vector2i(5, 7), Vector2i(6, 5), Vector2i(8, 8), Vector2i(10, 6), Vector2i(11, 4), Vector2i(13, 5)]:
+		_rect(img, x + b.x, y + T - 1 - b.y, 1, b.y, blade)
+	_rect(img, x + 8, y + T - 9, 1, 3, blade.lightened(0.25))
+	_rect(img, x + 5, y + T - 8, 1, 2, blade.lightened(0.25))
+
+
+## A scrubby weed, or with `dry` a brown tumbleweed.
+func _weed(img: Image, x: int, y: int, dry: bool) -> void:
+	if dry:
+		var twig := Color("8a6a42")
+		_rect(img, x + 4, y + 7, 8, 8, twig.darkened(0.35))
+		_rect(img, x + 5, y + 6, 6, 10, twig.darkened(0.35))
+		_rect(img, x + 5, y + 8, 6, 6, twig)
+		for p: Vector2i in [Vector2i(6, 9), Vector2i(9, 8), Vector2i(8, 11), Vector2i(6, 12), Vector2i(10, 12)]:
+			_rect(img, x + p.x, y + p.y, 1, 1, twig.darkened(0.45))
+		return
+	var leaf := Color("5f8a4a")
+	_rect(img, x + 7, y + 8, 2, 7, leaf.darkened(0.3))  # stem
+	_rect(img, x + 3, y + 9, 4, 2, leaf)
+	_rect(img, x + 9, y + 7, 4, 2, leaf)
+	_rect(img, x + 4, y + 12, 3, 2, leaf)
+	_rect(img, x + 9, y + 11, 3, 2, leaf)
+	_rect(img, x + 6, y + 5, 4, 3, leaf.lightened(0.15))
+	_rect(img, x + 7, y + 4, 2, 1, Color("d9c85a"))  # seed head
 
 
 # --- characters and objects --------------------------------------------------

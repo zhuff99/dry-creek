@@ -70,6 +70,15 @@ func remove_from_slot(index: int, count: int = 1) -> int:
 	return removed
 
 
+## Sets the uses left in the tool at `index`, clamped to what it can hold.
+func set_charge(index: int, value: int) -> void:
+	var stack := get_slot(index)
+	if stack == null:
+		return
+	stack.charge = clampi(value, 0, stack.capacity())
+	changed.emit()
+
+
 ## Moves slot `from` onto slot `to`: merges matching items, otherwise swaps.
 func move_slot(from: int, to: int) -> void:
 	if from == to or get_slot(from) == null or to < 0 or to >= _slots.size():

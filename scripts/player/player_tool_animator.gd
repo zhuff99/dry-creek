@@ -12,6 +12,9 @@ const SWING_RECOVER := 0.16
 const POUR_TILT := 0.12
 const POUR_HOLD := 0.36
 const POUR_RETURN := 0.1
+const DIP_DOWN := 0.14
+const DIP_HOLD := 0.22
+const DIP_UP := 0.14
 
 ## Where the hand is, relative to the player's feet.
 const HAND := Vector2(0, -7)
@@ -48,6 +51,8 @@ func play(
 	match kind:
 		ToolData.UseAnimation.POUR:
 			tween = _pour(direction, on_impact)
+		ToolData.UseAnimation.DIP:
+			tween = _dip(direction, on_impact)
 		_:
 			# Chopping at a tile above: the tool passes behind the character.
 			show_behind_parent = direction.y < -0.5
@@ -101,6 +106,31 @@ func _pour(direction: Vector2, on_impact: Callable) -> Tween:
 	tween.tween_interval(POUR_HOLD / 2.0)
 	tween.tween_callback(_drops.set_emitting.bind(false))
 	tween.tween_property(_held, "rotation", 0.0, POUR_RETURN)
+	return tween
+
+
+## Filling up: reach out over the water, dunk the can, lift it back.
+func _dip(direction: Vector2, on_impact: Callable) -> Tween:
+	var side := -1.0 if direction.x < 0.0 else 1.0
+	_held.centered = true
+	_held.offset = Vector2.ZERO
+	_held.flip_h = side < 0.0
+	_held.rotation = 0.0
+	var reach := HAND + direction * CAN_REACH
+	var dunked := reach + direction * 4.0 + Vector2(0, 3)
+	_held.position = reach
+	_drops.position = dunked
+
+	var tween := create_tween()
+	tween.tween_property(_held, "position", dunked, DIP_DOWN)
+	# Tip the opening into the current.
+	tween.parallel().tween_property(_held, "rotation", -side * 0.6, DIP_DOWN)
+	tween.tween_callback(_drops.set_emitting.bind(true))
+	tween.tween_interval(DIP_HOLD)
+	tween.tween_callback(_drops.set_emitting.bind(false))
+	tween.tween_callback(on_impact)
+	tween.tween_property(_held, "position", reach, DIP_UP)
+	tween.parallel().tween_property(_held, "rotation", 0.0, DIP_UP)
 	return tween
 
 

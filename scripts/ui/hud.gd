@@ -45,7 +45,12 @@ func _on_slot_selected(_index: int) -> void:
 
 func _refresh_item_label() -> void:
 	var stack := GameState.selected_stack()
-	_set_text(_item_label, stack.item.display_name if stack != null else "")
+	if stack == null:
+		_set_text(_item_label, "")
+	elif stack.capacity() > 0:
+		_set_text(_item_label, "%s  %d/%d" % [stack.item.display_name, stack.charge, stack.capacity()])
+	else:
+		_set_text(_item_label, stack.item.display_name)
 
 
 func _show_toast(text: String) -> void:

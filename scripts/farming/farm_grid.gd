@@ -5,12 +5,15 @@ extends Node2D
 
 const CROP_SCENE := preload("res://scenes/farming/crop.tscn")
 const TILE_SOURCE_ID := 0
-## Name of the TileSet custom data layer that marks ground the hoe can till.
+## TileSet custom data layers: ground the hoe can till, and open water.
 const TILLABLE_LAYER := "tillable"
+const WATER_LAYER := "water"
 
 @export var ground_layer: TileMapLayer
 ## Overlay layer that shows tilled and watered soil on top of the ground.
 @export var soil_layer: TileMapLayer
+## Rocks, trees and brush. A cell with anything on this layer cannot be tilled.
+@export var objects_layer: TileMapLayer
 ## Crops are added here so they y-sort with the player.
 @export var crop_parent: Node2D
 ## Atlas coordinates of the soil tiles. Re-point these when swapping art.
@@ -43,8 +46,19 @@ func is_tillable(cell: Vector2i) -> bool:
 	return tile != null and tile.get_custom_data(TILLABLE_LAYER) == true
 
 
+## True for river and pond tiles, where the watering can fills up.
+func is_water(cell: Vector2i) -> bool:
+	var tile := ground_layer.get_cell_tile_data(cell)
+	return tile != null and tile.get_custom_data(WATER_LAYER) == true
+
+
+## True if a rock, tree, weed or grass tuft occupies the cell.
+func is_blocked(cell: Vector2i) -> bool:
+	return objects_layer != null and objects_layer.get_cell_source_id(cell) != -1
+
+
 func can_till(cell: Vector2i) -> bool:
-	return is_tillable(cell) and not _farm.is_tilled(cell)
+	return is_tillable(cell) and not is_blocked(cell) and not _farm.is_tilled(cell)
 
 
 func till(cell: Vector2i) -> bool:

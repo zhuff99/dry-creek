@@ -8,24 +8,26 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="6_player"]
 
 [node name="Farm" type="Node2D"]
+y_sort_enabled = true
 script = ExtResource("1_farm")
 
 [node name="Map" parent="." instance=ExtResource("2_map")]
 
-[node name="FarmGrid" type="Node2D" parent="." node_paths=PackedStringArray("ground_layer", "soil_layer", "crop_parent")]
+[node name="FarmGrid" type="Node2D" parent="." node_paths=PackedStringArray("ground_layer", "soil_layer", "objects_layer", "crop_parent")]
 script = ExtResource("3_grid")
 ground_layer = NodePath("../Map/Ground")
 soil_layer = NodePath("../Map/Soil")
+objects_layer = NodePath("../Map/Objects")
 crop_parent = NodePath("../Entities")
 
 [node name="Entities" type="Node2D" parent="."]
 y_sort_enabled = true
 
 [node name="Bed" parent="Entities" instance=ExtResource("4_bed")]
-position = Vector2(104, 64)
+position = Vector2(104, 176)
 
 [node name="ShippingCrate" parent="Entities" instance=ExtResource("5_crate")]
-position = Vector2(216, 136)
+position = Vector2(216, 248)
 
 [node name="Player" parent="Entities" instance=ExtResource("6_player")]
-position = Vector2(136, 92)
+position = Vector2(136, 204)
