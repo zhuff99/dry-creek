@@ -14,6 +14,7 @@ var broken: bool = false
 
 
 func _ready() -> void:
+	add_to_group(&"practice_targets")
 	_hurtbox.shot.connect(_on_shot)
 	EventBus.day_started.connect(_on_day_started)
 
@@ -32,6 +33,10 @@ func _on_shot(hit: Shot) -> void:
 
 
 func _on_day_started(_day: int) -> void:
+	stand_up()
+
+
+func stand_up() -> void:
 	broken = false
 	_sprite.show()
 	_shape.set_deferred(&"disabled", false)

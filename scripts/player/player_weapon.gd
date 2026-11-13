@@ -15,8 +15,6 @@ extends Node2D
 
 const WORLD_LAYER := 1
 const HURTBOX_LAYER := 1 << 3
-## Walking speed while aiming or reloading, as a share of normal.
-const SLOW_FACTOR := 0.45
 ## Pixel of the held sprite that sits in the hand (the grip).
 const GRIP := Vector2(1.5, 3.5)
 ## How far from the hand the gun is held out when raised.
@@ -50,6 +48,7 @@ var _hint_given: bool = false
 
 
 func _ready() -> void:
+	add_to_group(&"player_weapon")
 	_gun.hide()
 	_tracer.hide()
 
@@ -70,7 +69,7 @@ func _process(delta: float) -> void:
 	aiming = Input.is_action_pressed(&"aim") and not loading and not _player.busy
 	if aiming and not was_aiming:
 		spread = weapon.snap_spread
-	_player.speed_factor = SLOW_FACTOR if aiming or loading else 1.0
+	_player.speed_factor = weapon.aim_walk_speed if aiming or loading else 1.0
 	_player.facing_locked = aiming
 
 	var direction := _aim_direction() if aiming else _player.facing

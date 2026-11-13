@@ -29,6 +29,10 @@ extends ItemData
 ## Added by each shot.
 @export_range(0.0, 60.0, 0.5) var recoil_spread: float = 7.0
 
+@export_group("Handling")
+## Walking speed while aiming or reloading, as a share of normal.
+@export_range(0.0, 1.0, 0.05) var aim_walk_speed: float = 0.45
+
 @export_group("Timing, in seconds")
 ## Shortest time between shots (cocking the hammer).
 @export_range(0.05, 3.0, 0.05) var fire_interval: float = 0.45

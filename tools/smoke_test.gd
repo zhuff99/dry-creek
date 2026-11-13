@@ -463,6 +463,28 @@ func _run() -> void:
 	await create_timer(2.5).timeout
 	_release(&"reload")
 	_check(_state.rounds_loaded == 6 and _state.inventory.count_of(rounds) == spare - 6, "and stops when the cylinder is full")
+	# The tuning panel changes the gun's numbers while the game runs.
+	var tuner: Control = main.get_node("UI/WeaponTuner")
+	_press(&"toggle_tuning")
+	await _frames(3)
+	_release(&"toggle_tuning")
+	_check(tuner.visible and not paused, "the tuning key opens the panel without pausing")
+	var steady_before: float = gun.steady_spread
+	tuner.slider_for(&"steady_spread").value = 5.0
+	_check(is_equal_approx(gun.steady_spread, 5.0), "moving a slider changes the gun at once")
+	weapon.aim_override = FIRING_SPOT + Vector2(0, 400)
+	_press(&"aim")
+	await create_timer(1.2).timeout
+	_check(is_equal_approx(weapon.spread, 5.0), "and the cone settles at the new width (%.1f degrees)" % weapon.spread)
+	await _shot("20_tuning_panel")
+	_release(&"aim")
+	tuner.call(&"_reset")
+	_check(is_equal_approx(gun.steady_spread, steady_before), "Reset puts the numbers back")
+	_press(&"toggle_tuning")
+	await _frames(3)
+	_release(&"toggle_tuning")
+	_check(not tuner.visible, "the tuning key closes it again")
+
 	weapon.aim_override = null
 	_press(&"toggle_weapon")
 	await _frames(2)
@@ -482,7 +504,7 @@ func _run() -> void:
 	var inside_door: Node2D = world.area.get_node("Spawns/door")
 	_check(player.global_position.distance_to(inside_door.global_position) < 1.0, "the player arrives just inside the door")
 	await _frames(20)
-	await _shot("19_cabin_inside")
+	await _shot("21_cabin_inside")
 	var bed: Node2D = world.area.get_node("Entities/Bed")
 	player.global_position = bed.global_position + Vector2(24, -8)
 	await _physics_frames(3)
@@ -493,7 +515,7 @@ func _run() -> void:
 		await process_frame
 	_check(_clock.day == day_before + 1, "sleeping in the bed starts the next day")
 	_check(world.area.name == "CabinInterior", "and you wake up inside")
-	await _shot("20_by_the_bed")
+	await _shot("22_by_the_bed")
 	Input.action_press(&"move_up")
 	await _physics_frames(90)
 	Input.action_release(&"move_up")
@@ -518,7 +540,7 @@ func _run() -> void:
 				crops_shown += 1
 	_check(crops > 0 and crops_shown == crops, "the growing crops are drawn again (%d of %d)" % [crops_shown, crops])
 	await _frames(20)
-	await _shot("21_back_outside")
+	await _shot("23_back_outside")
 
 	for cue: StringName in EXPECTED_SOUNDS:
 		_check(audio.play_counts.get(cue, 0) > 0, "sound '%s' played (%d times)" % [cue, audio.play_counts.get(cue, 0)])
