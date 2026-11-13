@@ -14,6 +14,10 @@ Add one row per pack as it goes into `assets/`. Keep the pack's own license file
 |---|---|---|---|---|---|
 | Ninja Adventure Asset Pack | [Pixel-boy](https://pixel-boy.itch.io/) and [AAA](https://www.instagram.com/challenger.aaa/) | CC0 1.0 (public domain). Attribution not required but appreciated. | https://pixel-boy.itch.io/ninja-adventure-asset-pack | Ground, river, trees, rocks, plants, yard furniture (woodpile, hay, barrel, lantern, hitching rail, clothesline, scarecrow), the bed, barrel, pail and candle in the cabin, crate, the bases of the player character and the rattlesnake, tool and resource icons, UI panels, sound effects, music | `assets/ninja_adventure/` (only the files the game uses; license in `LICENSE.txt`) |
 
+### Font (`assets/fonts/`)
+
+- `dry_creek.fnt`, `dry_creek.png`: the game's pixel font. Original to this project: drawn by hand in `tools/dry_creek_font.txt` and built by `tools/build_font.gd`.
+
 ### Derived art and sound (`assets/derived/`)
 
 Made from Ninja Adventure files by `tools/build_derived_art.gd` and `tools/build_derived_audio.gd`, so still CC0:

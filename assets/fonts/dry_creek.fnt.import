@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://b8rjj6r82wk3d"
+path="res://.godot/imported/dry_creek.fnt-6a3add2a95f63344c12ecf7aa3b8add1.fontdata"
+
+[deps]
+
+source_file="res://assets/fonts/dry_creek.fnt"
+dest_files=["res://.godot/imported/dry_creek.fnt-6a3add2a95f63344c12ecf7aa3b8add1.fontdata"]
+
+[params]
+
+fallbacks=[]
+compress=true
+scaling_mode=1

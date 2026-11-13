@@ -2,7 +2,8 @@ extends Control
 ## Always-on overlay: day, health, money, held item name, interaction prompt,
 ## toasts.
 
-const TOAST_HOLD_SECONDS := 2.5
+const TOAST_HOLD_SECONDS := 2.0
+const TOAST_SECONDS_PER_LETTER := 0.04
 const TOAST_FADE_SECONDS := 0.5
 
 var _toast_tween: Tween
@@ -89,7 +90,8 @@ func _show_toast(text: String) -> void:
 	if _toast_tween != null:
 		_toast_tween.kill()
 	_toast_tween = create_tween()
-	_toast_tween.tween_interval(TOAST_HOLD_SECONDS)
+	# Longer messages stay up longer, so there is time to read them.
+	_toast_tween.tween_interval(TOAST_HOLD_SECONDS + text.length() * TOAST_SECONDS_PER_LETTER)
 	_toast_tween.tween_property(_toast_label, "modulate:a", 0.0, TOAST_FADE_SECONDS)
 
 

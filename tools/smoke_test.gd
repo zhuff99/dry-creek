@@ -92,6 +92,18 @@ func _run() -> void:
 	var river_sound: AudioStreamPlayer = main.get_node("World/Farm/RiverSound")
 	await _shot("01_start")
 
+	# --- Text: everything is written in the game's own pixel font, at its
+	# drawn size, and it has every character a message might use.
+	var day_label: Label = main.get_node("UI/HUD/TopBar/DayLabel")
+	var font: Font = day_label.get_theme_font(&"font")
+	_check(font.resource_path.ends_with("dry_creek.fnt"), "labels use the game's pixel font (%s)" % font.resource_path)
+	_check(day_label.get_theme_font_size(&"font_size") == 11, "at the size it was drawn for")
+	var undrawn := ""
+	for code: int in range(33, 127):
+		if not font.has_char(code) or font.get_char_size(code, 11).x <= 0.0:
+			undrawn += char(code)
+	_check(undrawn == "", "the font has every letter, number and mark (missing: '%s')" % undrawn)
+
 	# --- Wildlife: the day's snakes start out in the brush, well away from
 	# home. They are then removed so they cannot bite during the other checks.
 	var wildlife: Node = main.get_node("World/Farm/Wildlife")

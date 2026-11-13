@@ -11,7 +11,7 @@ extends PanelContainer
 
 ## Exported ranges that are not about how the gun handles.
 const SKIPPED: Array[StringName] = [&"max_stack", &"damage", &"noise_radius"]
-const NAME_WIDTH := 78
+const NAME_WIDTH := 90
 const SLIDER_WIDTH := 60
 const VALUE_WIDTH := 24
 ## The engine's own slider knob is 16 pixels tall, a lot on a 270-pixel
