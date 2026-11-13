@@ -1,7 +1,8 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
-[ext_resource type="Texture2D" path="res://assets/placeholder/characters/player.png" id="2_sprite"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/characters/inspector/Walk.png" id="2_sprite"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/characters/Shadow.png" id="7_shadow"]
 [ext_resource type="Script" path="res://scripts/player/player_item_user.gd" id="3_item_user"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/ui/tile_cursor.png" id="4_cursor"]
 [ext_resource type="Script" path="res://scripts/player/player_interactor.gd" id="5_interactor"]
@@ -18,10 +19,16 @@ collision_layer = 2
 motion_mode = 1
 script = ExtResource("1_player")
 
+[node name="Shadow" type="Sprite2D" parent="."]
+modulate = Color(1, 1, 1, 0.45)
+position = Vector2(0, -2)
+texture = ExtResource("7_shadow")
+
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(0, -8)
 texture = ExtResource("2_sprite")
-hframes = 3
+hframes = 4
+vframes = 4
 
 [node name="ToolAnimator" type="Node2D" parent="." node_paths=PackedStringArray("body")]
 script = ExtResource("6_animator")

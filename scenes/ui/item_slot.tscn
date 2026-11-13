@@ -1,39 +1,40 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/item_slot_ui.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/ui/nine_path_bg.png" id="2_cell"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/ui/nine_path_focus.png" id="3_focus"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
-bg_color = Color(0.13, 0.09, 0.06, 0.85)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.42, 0.31, 0.2, 1)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_normal"]
+texture = ExtResource("2_cell")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hover"]
-bg_color = Color(0.22, 0.16, 0.1, 0.9)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.6, 0.46, 0.3, 1)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_hover"]
+texture = ExtResource("2_cell")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
+modulate_color = Color(1.25, 1.2, 1.1, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_focus"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_highlight"]
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_highlight"]
+texture = ExtResource("3_focus")
+texture_margin_left = 3.0
+texture_margin_top = 3.0
+texture_margin_right = 3.0
+texture_margin_bottom = 3.0
 draw_center = false
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 0.86, 0.42, 1)
 
 [node name="ItemSlot" type="Button"]
 custom_minimum_size = Vector2(20, 20)
 focus_mode = 0
-theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
-theme_override_styles/hover = SubResource("StyleBoxFlat_hover")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_hover")
+theme_override_styles/normal = SubResource("StyleBoxTexture_normal")
+theme_override_styles/hover = SubResource("StyleBoxTexture_hover")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_hover")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
 script = ExtResource("1_script")
 
@@ -91,4 +92,4 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_highlight")
+theme_override_styles/panel = SubResource("StyleBoxTexture_highlight")

@@ -21,7 +21,7 @@ const HAND := Vector2(0, -7)
 ## Item icons are drawn pointing up and to the right.
 const ICON_ANGLE := -PI / 4.0
 ## Pixel of a swung icon that sits in the hand (the bottom of the handle).
-const GRIP_PIXEL := Vector2(3, 13)
+const GRIP_PIXEL := Vector2(2, 14)
 ## Default colour of the burst thrown up when a swing lands.
 const DIRT_COLOR := Color(0.42, 0.28, 0.17)
 ## How far the body leans into a strike.

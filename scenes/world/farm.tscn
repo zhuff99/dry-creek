@@ -13,10 +13,11 @@ script = ExtResource("1_farm")
 
 [node name="Map" parent="." instance=ExtResource("2_map")]
 
-[node name="FarmGrid" type="Node2D" parent="." node_paths=PackedStringArray("ground_layer", "soil_layer", "objects_layer", "crop_parent")]
+[node name="FarmGrid" type="Node2D" parent="." node_paths=PackedStringArray("ground_layer", "soil_layer", "wet_layer", "objects_layer", "crop_parent")]
 script = ExtResource("3_grid")
 ground_layer = NodePath("../Map/Ground")
 soil_layer = NodePath("../Map/Soil")
+wet_layer = NodePath("../Map/Wet")
 objects_layer = NodePath("../Map/Objects")
 crop_parent = NodePath("../Entities")
 

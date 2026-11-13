@@ -1,13 +1,16 @@
 class_name Player
 extends CharacterBody2D
-## Movement and facing. Item use and interaction live in child nodes.
-## The node origin is at the character's feet (used for y-sorting and for
-## working out which tile the player stands on).
+## Movement, facing and the walk cycle. Item use and interaction live in
+## child nodes. The node origin is at the character's feet (used for y-sorting
+## and for working out which tile the player stands on).
 
-# Columns of the character sheet. Facing left is the side frame flipped.
-const FRAME_DOWN := 0
-const FRAME_SIDE := 1
-const FRAME_UP := 2
+# The walk sheet has one column per direction and one row per frame.
+const COLUMN_DOWN := 0
+const COLUMN_UP := 1
+const COLUMN_LEFT := 2
+const COLUMN_RIGHT := 3
+const WALK_FRAMES := 4
+const WALK_FPS := 8.0
 
 @export var move_speed: float = 80.0
 
@@ -16,17 +19,23 @@ var facing := Vector2.DOWN
 ## True while an action animation (a tool swing) plays. Movement is locked.
 var busy: bool = false
 
+var _walk_time: float = 0.0
+
 @onready var _sprite: Sprite2D = $Sprite2D
 @onready var _camera: Camera2D = $Camera2D
 
 
-func _physics_process(_delta: float) -> void:
-	if busy:
-		return
-	var input := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+func _physics_process(delta: float) -> void:
+	var input := Vector2.ZERO
+	if not busy:
+		input = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	velocity = input * move_speed
-	if input != Vector2.ZERO:
-		face(input)
+	if input == Vector2.ZERO:
+		_walk_time = 0.0
+		_update_sprite()
+		return
+	_walk_time += delta
+	face(input)
 	move_and_slide()
 
 
@@ -38,13 +47,23 @@ func face(direction: Vector2) -> void:
 		facing = Vector2(signf(direction.x), 0)
 	else:
 		facing = Vector2(0, signf(direction.y))
-	_sprite.flip_h = facing.x < 0
-	if facing.y > 0:
-		_sprite.frame = FRAME_DOWN
-	elif facing.y < 0:
-		_sprite.frame = FRAME_UP
-	else:
-		_sprite.frame = FRAME_SIDE
+	_update_sprite()
+
+
+func _update_sprite() -> void:
+	var column := COLUMN_DOWN
+	if facing.y < 0:
+		column = COLUMN_UP
+	elif facing.x < 0:
+		column = COLUMN_LEFT
+	elif facing.x > 0:
+		column = COLUMN_RIGHT
+	# Standing still shows the first frame; walking starts on the second so
+	# the first step is visible straight away.
+	var row := 0
+	if _walk_time > 0.0:
+		row = (int(_walk_time * WALK_FPS) + 1) % WALK_FRAMES
+	_sprite.frame_coords = Vector2i(column, row)
 
 
 ## Stops the camera from showing past the edge of the map.

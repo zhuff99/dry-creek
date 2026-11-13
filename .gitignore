@@ -22,3 +22,6 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Downloaded art pack archives stay local; only the files the game uses are committed
+/*.zip

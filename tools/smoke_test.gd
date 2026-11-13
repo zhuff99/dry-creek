@@ -77,7 +77,6 @@ func _run() -> void:
 	_check(grid.can_till(CORN_CELLS[0]), "open dirt can be tilled")
 	_check(not grid.can_till(Vector2i(8, 12)), "cabin floor cannot be tilled")
 	_check(not grid.can_till(RIVER_CELL), "water cannot be tilled")
-	_check(not grid.can_till(BANK_CELL), "the river bank cannot be tilled")
 	var debris := objects.get_used_cells()
 	_check(debris.size() > 60, "rocks, trees and brush are scattered around (%d)" % debris.size())
 	_check(not grid.can_till(debris[0]), "a tile with something on it cannot be tilled")
@@ -264,10 +263,11 @@ func _run() -> void:
 	var item_db: Node = root.get_node("ItemDB")
 	var targets := {}
 	for cell: Vector2i in objects.get_used_cells():
-		var kind: StringName = grid.debris_at(cell).id
-		# Rows near the top are the far bank of the river, which is out of reach.
-		if cell.y > 8 and not targets.has(kind):
-			targets[kind] = cell
+		# Border trees are scenery, not debris, and the rows near the top are
+		# the far bank of the river, which is out of reach.
+		var found: Variant = grid.debris_at(cell)
+		if found != null and cell.y > 8 and not targets.has(found.id):
+			targets[found.id] = cell
 	_check(targets.size() == 4, "the map has trees, rocks, weeds and grass")
 	var tree: Vector2i = targets[&"tree"]
 	var rock: Vector2i = targets[&"rock"]

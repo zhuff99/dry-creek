@@ -4,7 +4,6 @@ extends Node2D
 ## tile" and keeps the soil tiles and crop sprites in sync with the data.
 
 const CROP_SCENE := preload("res://scenes/farming/crop.tscn")
-const TILE_SOURCE_ID := 0
 ## TileSet custom data layers: ground the hoe can till, and open water.
 const TILLABLE_LAYER := "tillable"
 const WATER_LAYER := "water"
@@ -12,15 +11,14 @@ const WATER_LAYER := "water"
 const DEBRIS_LAYER := "debris"
 
 @export var ground_layer: TileMapLayer
-## Overlay layer that shows tilled and watered soil on top of the ground.
+## Overlay layer that shows tilled soil on top of the ground.
 @export var soil_layer: TileMapLayer
+## Overlay on top of that: the darker soil of plots watered today.
+@export var wet_layer: TileMapLayer
 ## Rocks, trees and brush. A cell with anything on this layer cannot be tilled.
 @export var objects_layer: TileMapLayer
 ## Crops are added here so they y-sort with the player.
 @export var crop_parent: Node2D
-## Atlas coordinates of the soil tiles. Re-point these when swapping art.
-@export var tilled_tile := Vector2i(0, 1)
-@export var watered_tile := Vector2i(1, 1)
 
 var _farm: FarmData
 var _crop_nodes: Dictionary[Vector2i, Crop] = {}
@@ -122,9 +120,14 @@ func _refresh_cell(cell: Vector2i) -> void:
 	var plot := _farm.get_plot(cell)
 	if plot == null:
 		soil_layer.erase_cell(cell)
+		wet_layer.erase_cell(cell)
 		_remove_crop_node(cell)
+	# A plot's edges depend on its neighbours, so redraw the 3x3 around it.
+	for offset_y: int in range(-1, 2):
+		for offset_x: int in range(-1, 2):
+			_draw_soil(cell + Vector2i(offset_x, offset_y))
+	if plot == null:
 		return
-	soil_layer.set_cell(cell, TILE_SOURCE_ID, watered_tile if plot.watered else tilled_tile)
 	if not plot.has_crop():
 		_remove_crop_node(cell)
 		return
@@ -138,6 +141,20 @@ func _refresh_cell(cell: Vector2i) -> void:
 		_crop_nodes[cell] = crop_node
 	else:
 		crop_node.set_growth(plot.days_grown)
+
+
+## Draws the soil piece that fits `cell`'s tilled neighbours, and the wet
+## version over it if the plot has been watered.
+func _draw_soil(cell: Vector2i) -> void:
+	var plot := _farm.get_plot(cell)
+	if plot == null:
+		return
+	var piece := BlobTiles.coords(BlobTiles.mask_at(cell, _farm.is_tilled))
+	soil_layer.set_cell(cell, FarmTiles.SRC_SOIL, piece)
+	if plot.watered:
+		wet_layer.set_cell(cell, FarmTiles.SRC_WET_SOIL, piece)
+	else:
+		wet_layer.erase_cell(cell)
 
 
 func _remove_debris_tile(cell: Vector2i) -> void:
