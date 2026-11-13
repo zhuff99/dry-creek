@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CreatureData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/creature_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/derived/rattlesnake.png" id="2_sheet"]
+[ext_resource type="Resource" path="res://resources/items/snake_meat.tres" id="3_drop"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"rattlesnake"
+display_name = "Rattlesnake"
+sprite_sheet = ExtResource("2_sheet")
+max_health = 2
+move_speed = 14.0
+wander_radius = 40.0
+notice_radius = 48.0
+strike_radius = 26.0
+calm_radius = 64.0
+damage = 2
+warn_seconds = 0.8
+strike_reach = 24.0
+strike_seconds = 0.12
+recover_seconds = 1.2
+drop_item = ExtResource("3_drop")
+drop_min = 1
+drop_max = 1
+warn_sound = &"snake_rattle"
+attack_sound = &"snake_strike"
+death_sound = &"snake_die"

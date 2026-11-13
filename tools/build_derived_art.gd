@@ -16,6 +16,8 @@ extends SceneTree
 ##   into a blue work shirt.
 ## - cowboy_aim.png: the same change made to his "attack" pose, one frame
 ##   per direction with the arm thrust out. It is the stance for aiming a gun.
+## - rattlesnake.png: the pack's green snake in a rattler's sandy browns,
+##   with a pale tail tip for the rattle.
 ## - log_cabin.png: the pack's buildings are Japanese houses. The homestead
 ##   cabin is drawn from scratch in the pack's colours by cabin_painter.gd.
 ## - cabin_room.png: the inside of that cabin (log walls, board floor, stone
@@ -42,6 +44,14 @@ const DRY_SOIL_SWAPS := {
 const WET_SOIL_SWAPS := {
 	"90775eff": Color("54402f"),
 	"816855ff": Color("463426"),
+}
+
+const SNAKE := "res://assets/ninja_adventure/characters/Snake3.png"
+const RATTLER_SWAPS := {
+	"adbc3aff": Color("d2b37d"),  # light green -> sand
+	"74a334ff": Color("a3754e"),  # green -> brown
+	"56864cff": Color("eecf9b"),  # dark tail -> pale rattle
+	"ffad5dff": Color("f1c471"),  # belly
 }
 
 ## Painted furniture to bare wood.
@@ -93,6 +103,9 @@ func _init() -> void:
 
 	_save(_cowboy(INSPECTOR + "Walk.png"), "cowboy_walk.png")
 	_save(_cowboy(INSPECTOR + "Attack.png"), "cowboy_aim.png")
+	var snake := _cut(SNAKE, Vector2i.ZERO, Vector2i(4, 4))
+	_swap_colours(snake, RATTLER_SWAPS)
+	_save(snake, "rattlesnake.png")
 	_save(CabinPainter.paint(), "log_cabin.png")
 	_save(RoomPainter.paint(), "cabin_room.png")
 	_save(_furniture(), "cabin_furniture.png")

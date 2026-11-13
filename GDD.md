@@ -77,7 +77,8 @@ Central, not optional. Aiming is inspired by Desperados 3.
 - Weapons upgrade at the blacksmith.
 
 ### 3.9 Enemies
-- **Wildlife:** snakes, coyotes, wolves, mountain lions.
+- **Wildlife:** snakes, coyotes, wolves, mountain lions. Each kind is a `CreatureData` resource (health, speed, senses, attack, drops, sounds) plus a behaviour script.
+  - **Rattlesnake (built):** hard to see against the dirt. Within three tiles it coils and rattles; back off and it settles; come within a tile and a half after it has warned and it strikes for 2, then needs a moment before it can strike again. One revolver shot kills it and leaves snake meat to sell. Three turn up on the farm each day, beside brush or rocks and never within twelve tiles of the cabin, so clearing land pushes them back. Killed ones stay dead until the next day.
 - **Outlaws:** bandit gangs and named bounty targets in the badlands.
 - **Deep canyons (late, horror tone):** a deranged cannibal settler gang.
 - **Abandoned silver mine:** procedurally varied floors. Upper floors are ordinary hazards; deeper floors turn supernatural (cursed miners, skeletons, stranger things).

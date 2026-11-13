@@ -3,6 +3,8 @@
 [ext_resource type="Script" path="res://scripts/world/world_area.gd" id="1_farm"]
 [ext_resource type="Script" path="res://scripts/world/spawn_point.gd" id="9_spawn"]
 [ext_resource type="PackedScene" path="res://scenes/objects/bottle.tscn" id="10_bottle"]
+[ext_resource type="Script" path="res://scripts/world/wildlife_spawner.gd" id="11_wildlife"]
+[ext_resource type="PackedScene" path="res://scenes/creatures/rattlesnake.tscn" id="12_snake"]
 [ext_resource type="PackedScene" path="res://scenes/world/farm_map.tscn" id="2_map"]
 [ext_resource type="Script" path="res://scripts/farming/farm_grid.gd" id="3_grid"]
 [ext_resource type="PackedScene" path="res://scenes/objects/cabin.tscn" id="4_cabin"]
@@ -60,3 +62,10 @@ listener = NodePath("../Entities/Player")
 [node name="cabin_door" type="Marker2D" parent="Spawns"]
 position = Vector2(136, 236)
 script = ExtResource("9_spawn")
+
+[node name="Wildlife" type="Node" parent="." node_paths=PackedStringArray("farm_grid", "entities", "home")]
+script = ExtResource("11_wildlife")
+creature_scene = ExtResource("12_snake")
+farm_grid = NodePath("../FarmGrid")
+entities = NodePath("../Entities")
+home = NodePath("../Spawns/cabin_door")

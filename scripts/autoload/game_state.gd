@@ -43,6 +43,9 @@ var rounds_loaded: int = 0:
 		EventBus.rounds_changed.emit(rounds_loaded)
 ## Goods waiting in the shipping crate: item id -> count. Paid out overnight.
 var shipping_bin: Dictionary[StringName, int] = {}
+## Wild animals killed today, by the key their spawner gave them. They are
+## back tomorrow.
+var wildlife_killed: Dictionary[String, bool] = {}
 
 
 func _ready() -> void:
@@ -100,6 +103,7 @@ func shipping_bin_value() -> int:
 func _on_day_ended(_day: int) -> void:
 	# A night's sleep mends everything, for now.
 	health = max_health
+	wildlife_killed.clear()
 	farm.advance_day()
 	var total := shipping_bin_value()
 	shipping_bin.clear()

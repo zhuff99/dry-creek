@@ -31,6 +31,7 @@ const EXPECTED_SOUNDS: Array[StringName] = [
 	&"ship", &"payout", &"sleep", &"morning",
 	&"select", &"ui_open", &"ui_close", &"ui_pick", &"ui_place", &"error", &"door",
 	&"gun_draw", &"gun_holster", &"gunshot", &"gun_empty", &"gun_load", &"bottle_break", &"hurt",
+	&"snake_rattle", &"snake_strike", &"snake_die",
 ]
 ## Where the test stands to shoot: in the field, four tiles north of the
 ## bottles on the practice rail.
@@ -86,6 +87,26 @@ func _run() -> void:
 	var audio: Node = root.get_node("Audio")
 	var river_sound: AudioStreamPlayer = main.get_node("World/Farm/RiverSound")
 	await _shot("01_start")
+
+	# --- Wildlife: the day's snakes start out in the brush, well away from
+	# home. They are then removed so they cannot bite during the other checks.
+	var wildlife: Node = main.get_node("World/Farm/Wildlife")
+	var snakes: Array[Node] = get_nodes_in_group(&"wildlife")
+	var nearest_to_home := 999
+	var hidden := 0
+	for animal: Node2D in snakes:
+		var cell: Vector2i = grid.cell_at(animal.global_position)
+		var from_home: Vector2i = (cell - CABIN_DOOR_CELL).abs()
+		nearest_to_home = mini(nearest_to_home, maxi(from_home.x, from_home.y))
+		for side: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			if grid.is_blocked(cell + side):
+				hidden += 1
+				break
+	_check(snakes.size() == 3, "three rattlesnakes are about on the first morning (%d)" % snakes.size())
+	_check(nearest_to_home >= 12, "none within twelve tiles of the cabin door (nearest %d)" % nearest_to_home)
+	_check(hidden == snakes.size(), "each one beside brush, a rock or a tree")
+	wildlife.clear()
+	await _frames(2)
 
 	# --- Sound: the farm starts its music, and the river is faint from the cabin.
 	_check(audio.current_playlist() == &"farm" and audio.is_music_playing(), "the farm's music is playing")
@@ -535,6 +556,60 @@ func _run() -> void:
 	await create_timer(0.6).timeout
 	_check(not held.visible, "and the gun is out of sight once it is holstered")
 
+	# --- A rattlesnake: it warns, settles if you back off, strikes if you
+	# come close, and one shot kills it.
+	var snake: Node2D = wildlife.spawn_at(FIRING_SPOT + Vector2(120, 0))
+	var snake_data: Resource = snake.data
+	player.global_position = FIRING_SPOT
+	await create_timer(0.5).timeout
+	_check(snake.state == snake.State.IDLE, "a snake left alone minds its own business")
+	player.global_position = snake.global_position + Vector2(-40, 0)
+	await create_timer(0.4).timeout
+	_check(snake.state == snake.State.WARN and snake.get_node("Alert").visible, "come near and it rattles")
+	_check(snake.facing == Vector2.LEFT, "facing you")
+	Engine.time_scale = 1.0
+	await _shot("21_snake_warning")
+	Engine.time_scale = 3.0
+	await create_timer(2.0).timeout
+	_check(snake.state == snake.State.WARN and _state.health == _state.max_health, "keep your distance and it only warns")
+	player.global_position = snake.global_position + Vector2(-110, 0)
+	await create_timer(0.4).timeout
+	_check(snake.state == snake.State.IDLE, "back off and it settles")
+	player.global_position = snake.global_position + Vector2(-16, 0)
+	await create_timer(snake_data.warn_seconds + 0.6).timeout
+	_check(_state.health == _state.max_health - snake_data.damage, "step in close and it bites (%d health left)" % _state.health)
+	_check(snake.state == snake.State.RECOVER or snake.state == snake.State.WARN, "then has to gather itself")
+
+	# Shoot it from outside its notice, following it with the gun as a
+	# player's mouse would.
+	player.global_position = snake.global_position + Vector2(-70, 0)
+	await _physics_frames(3)
+	_press(&"toggle_weapon")
+	await _frames(2)
+	_release(&"toggle_weapon")
+	_press(&"aim")
+	var aim_until := Time.get_ticks_msec() + 500
+	while Time.get_ticks_msec() < aim_until:
+		weapon.aim_override = snake.get_node("Hurtbox").global_position
+		await process_frame
+	var meat: Resource = item_db.get_item(&"snake_meat")
+	_press(&"primary_action")
+	await _frames(2)
+	_release(&"primary_action")
+	_release(&"aim")
+	await _frames(2)
+	_check(snake.state == snake.State.DEAD, "one shot kills it")
+	_check(_state.inventory.count_of(meat) == 1, "and it leaves snake meat")
+	_check(_world_events.has(&"creature_killed"), "the kill is reported as a world event")
+	weapon.aim_override = null
+	_press(&"toggle_weapon")
+	await _frames(2)
+	_release(&"toggle_weapon")
+	await create_timer(1.0).timeout
+	_check(not is_instance_valid(snake), "the body fades away")
+	# Mend the bite so the health checks below start from full.
+	_state.heal(_state.max_health)
+
 	# --- Health: a hit takes some, a second hit straight after does not.
 	var health_bar: ProgressBar = main.get_node("UI/HUD/TopBar/Health/Bar")
 	_check(_state.health == 10 and _state.max_health == 10 and health_bar.value == 10.0, "the player starts at full health (10)")
@@ -586,6 +661,7 @@ func _run() -> void:
 			"the tilled plots are drawn again (%d)" % soil.get_used_cells().size())
 	var objects_again: TileMapLayer = world.area.get_node("Map/Objects")
 	_check(objects_again.get_cell_source_id(tree) == -1, "the felled tree is still gone")
+	_check(get_nodes_in_group(&"wildlife").size() == 3, "it is a new day, so three snakes are about again")
 	var crops := 0
 	var crops_shown := 0
 	for child: Node in world.area.get_node("Entities").get_children():
