@@ -16,9 +16,43 @@ extends Node2D
 const WORLD_LAYER := 1
 const HURTBOX_LAYER := 1 << 3
 ## Pixel of the held sprite that sits in the hand (the grip).
-const GRIP := Vector2(1.5, 3.5)
-## How far from the hand the gun is held out when raised.
-const RAISED_REACH := 4.0
+const GRIP := Vector2(1.5, 2.5)
+## Distance from the grip to the end of the barrel.
+const BARREL := 6.0
+## Where the fist is in the aiming stance, measured from the feet, for each
+## way the body faces. Read off the pack's arm-thrust pose (cowboy_aim.png).
+const AIM_FISTS := {
+	Vector2.LEFT: Vector2(-8.0, -4.5),
+	Vector2.RIGHT: Vector2(8.0, -4.5),
+	Vector2.DOWN: Vector2(-2.5, -0.5),
+	Vector2.UP: Vector2(-3.5, -15.5),
+}
+## Gun out but lowered: the hand at the character's side and the angle the
+## barrel hangs at, for each way the body faces.
+const LOWERED_HANDS := {
+	Vector2.LEFT: Vector2(-3.0, -4.0),
+	Vector2.RIGHT: Vector2(3.0, -4.0),
+	Vector2.DOWN: Vector2(6.0, -5.0),
+	Vector2.UP: Vector2(-6.0, -5.0),
+}
+const LOWERED_ANGLES := {
+	Vector2.LEFT: 2.2,
+	Vector2.RIGHT: 0.95,
+	Vector2.DOWN: PI / 2.0,
+	Vector2.UP: PI / 2.0,
+}
+## Loading: held in front of the chest, barrel tipped up.
+const LOADING_HAND := Vector2(2.0, -3.0)
+## A holstered gun points at the ground; drawing swings it up from there.
+const HOLSTER_ANGLE := PI / 2.0
+const DRAW_SECONDS := 0.14
+## Recoil: how far the barrel jumps (radians) and the gun slides back.
+const RECOIL_TILT := 0.55
+const RECOIL_SLIDE := 2.0
+const RECOIL_SECONDS := 0.2
+const BODY_KICK := 1.0
+## How far the gun dips as each round is pushed home.
+const LOAD_DIP := 1.5
 const TRACER_SECONDS := 0.08
 const SHAKE_PIXELS := 2.0
 const DUST := Color(0.78, 0.66, 0.5)
@@ -38,6 +72,14 @@ var _cooldown: float = 0.0
 var _load_timer: float = 0.0
 var _tracer_tween: Tween
 var _hint_given: bool = false
+# Animation amounts, each driven from 1 to 0 (or 0 to 1) by a tween.
+## 0 = in the holster, 1 = fully out.
+var _raise: float = 0.0
+var _raise_tween: Tween
+## 1 at the instant of a shot, easing back to 0.
+var _recoil: float = 0.0
+## 1 as a round goes in, easing back to 0.
+var _load_bump: float = 0.0
 
 @onready var _player: Player = owner
 @onready var _gun: Sprite2D = $Gun
@@ -45,6 +87,7 @@ var _hint_given: bool = false
 @onready var _tracer: Line2D = $Tracer
 @onready var _flash: CPUParticles2D = $MuzzleFlash
 @onready var _impact: CPUParticles2D = $Impact
+@onready var _smoke: CPUParticles2D = $Smoke
 
 
 func _ready() -> void:
@@ -61,6 +104,9 @@ func _exit_tree() -> void:
 
 func _process(delta: float) -> void:
 	if not drawn:
+		# Still on its way back to the holster.
+		if _gun.visible:
+			_pose_gun(_player.facing, false)
 		return
 	var weapon := GameState.weapon
 	_cooldown = maxf(0.0, _cooldown - delta)
@@ -71,6 +117,7 @@ func _process(delta: float) -> void:
 		spread = weapon.snap_spread
 	_player.speed_factor = weapon.aim_walk_speed if aiming or loading else 1.0
 	_player.facing_locked = aiming
+	_player.aim_pose = aiming
 
 	var direction := _aim_direction() if aiming else _player.facing
 	if aiming:
@@ -110,9 +157,19 @@ func set_drawn(value: bool) -> void:
 	_player.armed = drawn
 	_player.speed_factor = 1.0
 	_player.facing_locked = false
+	_player.aim_pose = false
 	_gun.texture = weapon.held_sprite
-	_gun.visible = drawn
 	_guide.hide()
+	# Swing the gun up out of the holster, or back down into it.
+	if _raise_tween != null:
+		_raise_tween.kill()
+	_raise_tween = create_tween()
+	_raise_tween.tween_property(self, "_raise", 1.0 if drawn else 0.0, DRAW_SECONDS)
+	if drawn:
+		_gun.show()
+		_pose_gun(_player.facing, false)
+	else:
+		_raise_tween.tween_callback(_gun.hide)
 	Audio.play(weapon.draw_sound if drawn else weapon.holster_sound)
 	EventBus.weapon_drawn_changed.emit(drawn)
 	# A drawn gun is something people can see. Nobody reacts yet.
@@ -151,10 +208,17 @@ func fire() -> void:
 		_impact.restart()
 
 	spread = minf(weapon.snap_spread, spread + weapon.recoil_spread)
-	_show_tracer(from + direction * 6.0, hit.point)
-	_flash.position = direction * 8.0
+	var muzzle := _muzzle()
+	_show_tracer(muzzle, hit.point)
+	_flash.global_position = muzzle
 	_flash.direction = direction
 	_flash.restart()
+	_smoke.global_position = muzzle
+	_smoke.restart()
+	# The barrel jumps, the gun slides back in the hand, the body rocks.
+	_recoil = 1.0
+	create_tween().tween_property(self, "_recoil", 0.0, RECOIL_SECONDS).set_ease(Tween.EASE_OUT)
+	_player.kick(-direction * BODY_KICK)
 	_player.shake(SHAKE_PIXELS)
 	Audio.play(weapon.fire_sound)
 	# Gunfire is heard, not just seen. NPC hearing arrives with milestone 5.
@@ -176,6 +240,8 @@ func _feed_rounds(weapon: WeaponData, delta: float) -> bool:
 		GameState.inventory.remove_item(weapon.ammo_item, 1)
 		GameState.rounds_loaded += 1
 		Audio.play(weapon.load_sound)
+		_load_bump = 1.0
+		create_tween().tween_property(self, "_load_bump", 0.0, weapon.seconds_per_round * 0.5)
 	return true
 
 
@@ -209,28 +275,52 @@ func _cast(weapon: WeaponData, from: Vector2, direction: Vector2) -> Dictionary:
 
 func _show_cone(weapon: WeaponData, direction: Vector2) -> void:
 	var half := deg_to_rad(spread) * 0.5
+	# Bullets are traced from the middle of the body, so that reaching the
+	# gun past a wall cannot shoot through it. The lines are drawn from the
+	# muzzle, where the eye expects them.
 	var from := global_position
 	var centre := _cast(weapon, from, direction)
 	var left := _cast(weapon, from, direction.rotated(-half))
 	var right := _cast(weapon, from, direction.rotated(half))
-	_guide.show_cone(from, centre.point, left.point, right.point, centre.hurtbox != null)
+	_guide.show_cone(_muzzle(), centre.point, left.point, right.point, centre.hurtbox != null)
 
 
-## Holds the gun out along `direction` when raised, close to the body when
-## lowered, and tipped up while loading.
+## Puts the gun in the hand. Aiming: in the fist of the thrust-out arm,
+## pointing exactly along `direction`. Lowered: hanging at the side.
+## Loading: at the chest, tipped up. Then the draw, the recoil and the push
+## of a round going in are added on top.
 func _pose_gun(direction: Vector2, loading: bool) -> void:
-	var angle := direction.angle()
-	if loading:
-		angle = -PI / 2.0 + (0.5 if direction.x >= 0.0 else -0.5)
-	var to_the_left := absf(angle) > PI / 2.0
+	var facing := _player.facing
+	var hand: Vector2 = LOWERED_HANDS[facing]
+	var angle: float = LOWERED_ANGLES[facing]
+	if aiming:
+		hand = AIM_FISTS[facing]
+		angle = direction.angle()
+	elif loading:
+		hand = LOADING_HAND + Vector2(0.0, LOAD_DIP * _load_bump)
+		angle = -PI / 2.0 + (0.5 if facing.x >= 0.0 else -0.5)
+	angle = lerp_angle(HOLSTER_ANGLE, angle, _raise)
+
+	var along := Vector2.from_angle(angle)
+	var to_the_left := along.x < 0.0
+	hand -= along * RECOIL_SLIDE * _recoil
+	# "Up" for the barrel is anticlockwise when it points right.
+	angle += (RECOIL_TILT if to_the_left else -RECOIL_TILT) * _recoil
+
 	_gun.rotation = angle
 	_gun.flip_v = to_the_left
 	# Keep the grip in the hand whichever way the picture is flipped.
 	var height := _gun.texture.get_height()
 	_gun.offset = Vector2(-GRIP.x, -(height - GRIP.y) if to_the_left else -GRIP.y)
-	_gun.position = direction * (RAISED_REACH if aiming else 1.0)
-	# Pointing up the screen, the gun is on the far side of the body.
-	show_behind_parent = direction.y < -0.5
+	# `hand` is measured from the feet; this node sits at chest height.
+	_gun.position = hand - position
+	# Lowered and facing away, the gun is on the far side of the body.
+	show_behind_parent = not aiming and not loading and facing == Vector2.UP
+
+
+## The end of the barrel, in world coordinates.
+func _muzzle() -> Vector2:
+	return _gun.global_position + Vector2.from_angle(_gun.rotation) * BARREL
 
 
 func _show_tracer(from: Vector2, to: Vector2) -> void:

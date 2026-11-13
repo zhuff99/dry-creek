@@ -24,10 +24,18 @@ var armed: bool = false
 var facing_locked: bool = false
 ## Walking speed multiplier. Aiming and reloading slow you down.
 var speed_factor: float = 1.0
+## True while the body is in the aiming stance: arm thrust out, no walk cycle.
+var aim_pose: bool = false:
+	set(value):
+		aim_pose = value
+		if is_node_ready():
+			_update_sprite()
 
 var _walk_time: float = 0.0
 
 @onready var _sprite: Sprite2D = $Sprite2D
+@onready var _aim_sprite: Sprite2D = $AimSprite
+@onready var _sprite_home: Vector2 = _sprite.position
 @onready var _camera: Camera2D = $Camera2D
 
 
@@ -67,12 +75,29 @@ func _update_sprite() -> void:
 		column = COLUMN_LEFT
 	elif facing.x > 0:
 		column = COLUMN_RIGHT
+	_sprite.visible = not aim_pose
+	_aim_sprite.visible = aim_pose
+	if aim_pose:
+		_aim_sprite.frame = column
+		# The stance has no walk cycle; a one-pixel bob stands in for steps.
+		var bob := int(_walk_time * WALK_FPS) % 2 if _walk_time > 0.0 else 0
+		_aim_sprite.position = _sprite_home + Vector2(0, bob)
+		return
 	# Standing still shows the first frame; walking starts on the second so
 	# the first step is visible straight away.
 	var row := 0
 	if _walk_time > 0.0:
 		row = (int(_walk_time * WALK_FPS) + 1) % WALK_FRAMES
 	_sprite.frame_coords = Vector2i(column, row)
+
+
+## Knocks the body a little way and lets it settle back (a gun's recoil).
+func kick(offset: Vector2) -> void:
+	_sprite.offset = offset
+	_aim_sprite.offset = offset
+	var tween := create_tween().set_parallel()
+	tween.tween_property(_sprite, "offset", Vector2.ZERO, 0.14)
+	tween.tween_property(_aim_sprite, "offset", Vector2.ZERO, 0.14)
 
 
 ## A short jolt of the camera, for a gunshot.

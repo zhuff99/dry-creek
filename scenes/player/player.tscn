@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/player/player_interactor.gd" id="5_interactor"]
 [ext_resource type="Script" path="res://scripts/player/player_tool_animator.gd" id="6_animator"]
 [ext_resource type="Script" path="res://scripts/player/player_weapon.gd" id="8_weapon"]
+[ext_resource type="Texture2D" path="res://assets/derived/cowboy_aim.png" id="10_aim"]
 [ext_resource type="Script" path="res://scripts/player/aim_guide.gd" id="9_guide"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_feet"]
@@ -32,6 +33,12 @@ position = Vector2(0, -8)
 texture = ExtResource("2_sprite")
 hframes = 4
 vframes = 4
+
+[node name="AimSprite" type="Sprite2D" parent="."]
+visible = false
+position = Vector2(0, -8)
+texture = ExtResource("10_aim")
+hframes = 4
 
 [node name="ToolAnimator" type="Node2D" parent="." node_paths=PackedStringArray("body")]
 script = ExtResource("6_animator")
@@ -134,3 +141,19 @@ gravity = Vector2(0, 120)
 initial_velocity_min = 15.0
 initial_velocity_max = 40.0
 scale_amount_max = 2.0
+
+[node name="Smoke" type="CPUParticles2D" parent="Weapon"]
+top_level = true
+z_index = 1
+emitting = false
+amount = 5
+lifetime = 0.6
+one_shot = true
+explosiveness = 0.8
+direction = Vector2(0, -1)
+spread = 30.0
+gravity = Vector2(0, -15)
+initial_velocity_min = 4.0
+initial_velocity_max = 10.0
+scale_amount_max = 2.0
+color = Color(0.86, 0.86, 0.8, 0.7)

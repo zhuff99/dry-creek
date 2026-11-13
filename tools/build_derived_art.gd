@@ -14,6 +14,8 @@ extends SceneTree
 ##   wide-brimmed hat, a neckerchief and a long coat, so this is him with the
 ##   white fedora turned into a tan hat with a dark band and the trench coat
 ##   into a blue work shirt.
+## - cowboy_aim.png: the same change made to his "attack" pose, one frame
+##   per direction with the arm thrust out. It is the stance for aiming a gun.
 ## - log_cabin.png: the pack's buildings are Japanese houses. The homestead
 ##   cabin is drawn from scratch in the pack's colours by cabin_painter.gd.
 ## - cabin_room.png: the inside of that cabin (log walls, board floor, stone
@@ -61,7 +63,8 @@ const FURNITURE: Array[Dictionary] = [
 ]
 const FURNITURE_SHEET := Vector2i(4, 3)
 
-const INSPECTOR_WALK := "res://assets/ninja_adventure/characters/inspector/Walk.png"
+const INSPECTOR := "res://assets/ninja_adventure/characters/inspector/"
+const HAT_WHITE := "f2eaf1ff"
 ## The hat is the top eight rows of the figure in every frame.
 const HAT_ROWS := 8
 const HAT_SWAPS := {
@@ -88,7 +91,8 @@ func _init() -> void:
 	_swap_colours(wet, WET_SOIL_SWAPS)
 	_save(wet, "soil_wet.png")
 
-	_save(_cowboy(), "cowboy_walk.png")
+	_save(_cowboy(INSPECTOR + "Walk.png"), "cowboy_walk.png")
+	_save(_cowboy(INSPECTOR + "Attack.png"), "cowboy_aim.png")
 	_save(CabinPainter.paint(), "log_cabin.png")
 	_save(RoomPainter.paint(), "cabin_room.png")
 	_save(_furniture(), "cabin_furniture.png")
@@ -123,17 +127,19 @@ func _furniture() -> Image:
 	return sheet
 
 
-## The Inspector's walk sheet in ranch clothes. The hat and the coat share a
-## brown, so which swap applies depends on whether a pixel is in the hat.
-func _cowboy() -> Image:
-	var sheet := Image.load_from_file(ProjectSettings.globalize_path(INSPECTOR_WALK))
+## One of the Inspector's sheets in ranch clothes. The hat and the coat share
+## a brown, so which swap applies depends on whether a pixel is in the hat.
+func _cowboy(sheet_path: String) -> Image:
+	var sheet := Image.load_from_file(ProjectSettings.globalize_path(sheet_path))
 	sheet.convert(Image.FORMAT_RGBA8)
 	for frame_y: int in sheet.get_height() / T:
 		for frame_x: int in sheet.get_width() / T:
 			var frame := Rect2i(frame_x * T, frame_y * T, T, T)
-			# The figure bobs a pixel as it walks, so find where its hat starts.
+			# The figure bobs a pixel as it walks, and in one pose a hand is
+			# raised above the hat, so find the hat by its white: the outline
+			# is the row above the first white one.
 			var top := 0
-			while top < T and _row_is_empty(sheet, frame, top):
+			while top < T - 1 and not _row_has(sheet, frame, top + 1, HAT_WHITE):
 				top += 1
 			for y: int in T:
 				var swaps: Dictionary = HAT_SWAPS if y < top + HAT_ROWS else CLOTHES_SWAPS
@@ -145,11 +151,11 @@ func _cowboy() -> Image:
 	return sheet
 
 
-func _row_is_empty(img: Image, frame: Rect2i, y: int) -> bool:
+func _row_has(img: Image, frame: Rect2i, y: int, colour: String) -> bool:
 	for x: int in frame.size.x:
-		if img.get_pixel(frame.position.x + x, frame.position.y + y).a > 0.0:
-			return false
-	return true
+		if img.get_pixel(frame.position.x + x, frame.position.y + y).to_html(true) == colour:
+			return true
+	return false
 
 
 func _save(img: Image, file_name: String) -> void:

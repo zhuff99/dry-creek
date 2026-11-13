@@ -405,6 +405,11 @@ func _run() -> void:
 	Engine.time_scale = 3.0
 	await create_timer(0.8).timeout
 	_check(is_equal_approx(weapon.spread, gun.steady_spread), "holding still steadies it (%.1f degrees)" % weapon.spread)
+	var held: Sprite2D = weapon.get_node("Gun")
+	_check(player.get_node("AimSprite").visible and not player.get_node("Sprite2D").visible,
+			"aiming puts the body in its arm-out stance")
+	_check(held.visible and held.global_position.distance_to(player.global_position + weapon.AIM_FISTS[Vector2.DOWN]) < 0.6,
+			"with the gun in its fist")
 	_check(player.facing == Vector2.DOWN, "the player faces where they aim")
 	# Aim far off for this one, so a few steps sideways do not change the
 	# direction to the target.
@@ -463,6 +468,31 @@ func _run() -> void:
 	await create_timer(2.5).timeout
 	_release(&"reload")
 	_check(_state.rounds_loaded == 6 and _state.inventory.count_of(rounds) == spare - 6, "and stops when the cylinder is full")
+	# Pictures of the stance each way, and of the recoil, at real speed.
+	Engine.time_scale = 1.0
+	player.global_position = FIRING_SPOT
+	await _physics_frames(3)
+	for way: Array in [["left", Vector2.LEFT], ["right", Vector2.RIGHT], ["up", Vector2.UP], ["down", Vector2(0.4, 1.0)]]:
+		weapon.aim_override = FIRING_SPOT + way[1] * 90.0
+		_press(&"aim")
+		await create_timer(0.75).timeout
+		await _shot("20_aim_%s" % way[0])
+		if way[0] == "right":
+			_press(&"primary_action")
+			await _frames(2)
+			_release(&"primary_action")
+			await _shot("20_recoil")
+		_release(&"aim")
+		await _frames(3)
+	_check(not player.get_node("AimSprite").visible and held.visible, "lowering the gun returns to the normal stance, gun at the side")
+	await _shot("20_lowered")
+	_press(&"reload")
+	await create_timer(0.3).timeout
+	await _shot("20_loading")
+	await create_timer(0.3).timeout
+	_release(&"reload")
+	Engine.time_scale = 3.0
+
 	# The tuning panel changes the gun's numbers while the game runs.
 	var tuner: Control = main.get_node("UI/WeaponTuner")
 	_press(&"toggle_tuning")
@@ -476,7 +506,7 @@ func _run() -> void:
 	_press(&"aim")
 	await create_timer(1.2).timeout
 	_check(is_equal_approx(weapon.spread, 5.0), "and the cone settles at the new width (%.1f degrees)" % weapon.spread)
-	await _shot("20_tuning_panel")
+	await _shot("21_tuning_panel")
 	_release(&"aim")
 	tuner.call(&"_reset")
 	_check(is_equal_approx(gun.steady_spread, steady_before), "Reset puts the numbers back")
@@ -490,6 +520,8 @@ func _run() -> void:
 	await _frames(2)
 	_release(&"toggle_weapon")
 	_check(not weapon.drawn and not player.armed, "the holster key puts it away")
+	await create_timer(0.6).timeout
+	_check(not held.visible, "and the gun is out of sight once it is holstered")
 
 	# --- The cabin: in by the door, sleep in the bed, back out. The farm is
 	# freed while inside and rebuilt from GameState on the way out.
@@ -504,7 +536,7 @@ func _run() -> void:
 	var inside_door: Node2D = world.area.get_node("Spawns/door")
 	_check(player.global_position.distance_to(inside_door.global_position) < 1.0, "the player arrives just inside the door")
 	await _frames(20)
-	await _shot("21_cabin_inside")
+	await _shot("22_cabin_inside")
 	var bed: Node2D = world.area.get_node("Entities/Bed")
 	player.global_position = bed.global_position + Vector2(24, -8)
 	await _physics_frames(3)
@@ -515,7 +547,7 @@ func _run() -> void:
 		await process_frame
 	_check(_clock.day == day_before + 1, "sleeping in the bed starts the next day")
 	_check(world.area.name == "CabinInterior", "and you wake up inside")
-	await _shot("22_by_the_bed")
+	await _shot("23_by_the_bed")
 	Input.action_press(&"move_up")
 	await _physics_frames(90)
 	Input.action_release(&"move_up")
@@ -540,7 +572,7 @@ func _run() -> void:
 				crops_shown += 1
 	_check(crops > 0 and crops_shown == crops, "the growing crops are drawn again (%d of %d)" % [crops_shown, crops])
 	await _frames(20)
-	await _shot("23_back_outside")
+	await _shot("24_back_outside")
 
 	for cue: StringName in EXPECTED_SOUNDS:
 		_check(audio.play_counts.get(cue, 0) > 0, "sound '%s' played (%d times)" % [cue, audio.play_counts.get(cue, 0)])

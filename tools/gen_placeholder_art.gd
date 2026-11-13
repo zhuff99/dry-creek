@@ -61,14 +61,14 @@ const ROUNDS_ICON: Array[String] = [
 	"................",
 	"................",
 ]
-## The gun in the hand, pointing right, grip at the bottom left.
+## The gun in the hand, pointing right, grip at the bottom left. Kept small:
+## the whole character is sixteen pixels.
 const REVOLVER_HELD: Array[String] = [
-	"..OOOOOOOOOO",
-	".OMMMSMMMMMO",
-	".OSSSSOOOOO.",
-	"OGGOSO......",
-	"OGgO.O......",
-	".OO.........",
+	"..OOOOOO",
+	".OMSMMMO",
+	"OGSOOOO.",
+	"OGO.....",
+	".O......",
 ]
 
 
