@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tool_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/items/watering_can.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+tool_type = 1
+id = &"watering_can"
+display_name = "Watering Can"
+description = "Waters tilled soil. Crops only grow on days they are watered."
+icon = ExtResource("2_icon")
+max_stack = 1

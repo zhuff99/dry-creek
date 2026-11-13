@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SeedData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/seed_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/items/corn_seeds.png" id="2_icon"]
+[ext_resource type="Resource" path="res://resources/crops/corn.tres" id="3_crop"]
+
+[resource]
+script = ExtResource("1_script")
+crop = ExtResource("3_crop")
+id = &"corn_seeds"
+display_name = "Corn Seeds"
+description = "Plant on tilled soil. Ready after 4 watered days."
+icon = ExtResource("2_icon")

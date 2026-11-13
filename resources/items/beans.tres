@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/item_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/items/beans.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"beans"
+display_name = "Beans"
+description = "Pinto beans. The plant keeps producing after each picking."
+icon = ExtResource("2_icon")
+sell_price = 10

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CropData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/crop_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/crops/beans_growth.png" id="2_sheet"]
+[ext_resource type="Resource" path="res://resources/items/beans.tres" id="3_item"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"beans"
+display_name = "Beans"
+growth_sheet = ExtResource("2_sheet")
+stage_count = 5
+days_to_mature = 3
+harvest_item = ExtResource("3_item")
+harvest_min = 2
+harvest_max = 3
+regrow_days = 2

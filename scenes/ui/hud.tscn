@@ -1,0 +1,96 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+[ext_resource type="Script" path="res://scripts/ui/hotbar.gd" id="2_hotbar"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_backing"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.1, 0.07, 0.05, 0.72)
+
+[node name="HUD" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = 16.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="DayLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
+text = "Day 1"
+
+[node name="Spacer" type="Control" parent="TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="MoneyLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
+text = "$0"
+
+[node name="ToastRow" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 26.0
+offset_bottom = 40.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="ToastLabel" type="Label" parent="ToastRow"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
+
+[node name="Bottom" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -64.0
+offset_right = 160.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 2
+
+[node name="PromptLabel" type="Label" parent="Bottom"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
+horizontal_alignment = 1
+
+[node name="ItemLabel" type="Label" parent="Bottom"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
+horizontal_alignment = 1
+
+[node name="Hotbar" type="HBoxContainer" parent="Bottom"]
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_constants/separation = 2
+script = ExtResource("2_hotbar")

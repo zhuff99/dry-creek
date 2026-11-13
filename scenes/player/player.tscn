@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/characters/player.png" id="2_sprite"]
+[ext_resource type="Script" path="res://scripts/player/player_item_user.gd" id="3_item_user"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/ui/tile_cursor.png" id="4_cursor"]
+[ext_resource type="Script" path="res://scripts/player/player_interactor.gd" id="5_interactor"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_feet"]
+size = Vector2(10, 6)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_reach"]
+radius = 14.0
+
+[node name="Player" type="CharacterBody2D"]
+collision_layer = 2
+motion_mode = 1
+script = ExtResource("1_player")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -8)
+texture = ExtResource("2_sprite")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -3)
+shape = SubResource("RectangleShape2D_feet")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(0, -8)
+
+[node name="ItemUser" type="Node2D" parent="."]
+script = ExtResource("3_item_user")
+
+[node name="TileCursor" type="Sprite2D" parent="ItemUser"]
+top_level = true
+z_index = 1
+texture = ExtResource("4_cursor")
+
+[node name="Interactor" type="Area2D" parent="."]
+position = Vector2(0, -6)
+collision_layer = 0
+collision_mask = 4
+script = ExtResource("5_interactor")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Interactor"]
+shape = SubResource("CircleShape2D_reach")

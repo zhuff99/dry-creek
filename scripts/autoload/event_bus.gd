@@ -1,0 +1,43 @@
+extends Node
+## Global signal hub (autoload "EventBus").
+##
+## Systems talk through here instead of holding references to each other, so
+## scenes stay swappable. Signals are emitted from other scripts, which is why
+## each one carries an unused_signal ignore.
+
+# --- Time ---
+## Fired just before the day counter increments. Overnight simulation hooks in here.
+@warning_ignore("unused_signal")
+signal day_ended(day: int)
+@warning_ignore("unused_signal")
+signal day_started(day: int)
+## The player asked to sleep (bed). The day transition UI runs the rollover.
+@warning_ignore("unused_signal")
+signal sleep_requested
+
+# --- Economy ---
+@warning_ignore("unused_signal")
+signal money_changed(amount: int)
+## Overnight shipping crate payout. Emitted every night, total may be 0.
+@warning_ignore("unused_signal")
+signal shipment_paid(total: int)
+
+# --- UI ---
+@warning_ignore("unused_signal")
+signal hotbar_slot_selected(index: int)
+## Empty string means "nothing to interact with".
+@warning_ignore("unused_signal")
+signal interaction_prompt_changed(text: String)
+@warning_ignore("unused_signal")
+signal toast_requested(text: String)
+
+# --- World ---
+## Something happened in the world that an NPC could perceive.
+## M1 only reports farm events; crimes, gunfire and drawn weapons arrive with
+## combat (M4) and witnesses subscribe in M5.
+signal world_event(event: WorldEvent)
+
+
+## Convenience wrapper so callers do not build WorldEvent objects by hand.
+func report(type: StringName, actor: Node, position: Vector2, data: Dictionary = {}) -> void:
+	world_event.emit(WorldEvent.new(type, actor, position, data))
