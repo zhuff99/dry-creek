@@ -66,8 +66,12 @@ func _update_sprite() -> void:
 	_sprite.frame_coords = Vector2i(column, row)
 
 
-## Stops the camera from showing past the edge of the map.
+## Stops the camera from showing past the edge of the map. A place smaller
+## than the screen (a room) is centred on it instead.
 func set_camera_limits(bounds: Rect2i) -> void:
+	var spare := (Vector2i(get_viewport_rect().size) - bounds.size).max(Vector2i.ZERO)
+	var before := spare / 2
+	bounds = bounds.grow_individual(before.x, before.y, spare.x - before.x, spare.y - before.y)
 	_camera.limit_left = bounds.position.x
 	_camera.limit_top = bounds.position.y
 	_camera.limit_right = bounds.end.x

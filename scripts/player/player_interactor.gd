@@ -10,6 +10,12 @@ func _ready() -> void:
 	area_exited.connect(_on_area_exited)
 
 
+func _exit_tree() -> void:
+	# Leaving the area with a prompt showing would otherwise strand it on the HUD.
+	if _current != null:
+		EventBus.interaction_prompt_changed.emit("")
+
+
 func _process(_delta: float) -> void:
 	var nearest := _find_nearest()
 	if nearest != _current:

@@ -16,8 +16,13 @@ extends SceneTree
 ##   into a blue work shirt.
 ## - log_cabin.png: the pack's buildings are Japanese houses. The homestead
 ##   cabin is drawn from scratch in the pack's colours by cabin_painter.gd.
+## - cabin_room.png: the inside of that cabin (log walls, board floor, stone
+##   fireplace), drawn the same way by cabin_room_painter.gd.
+## - cabin_furniture.png: the pack's table, chair, stool, trunk, shelf and
+##   dresser with their bright orange paint swapped for plain wood.
 
 const CabinPainter := preload("res://tools/cabin_painter.gd")
+const RoomPainter := preload("res://tools/cabin_room_painter.gd")
 
 const T := 16
 const BLOB_BLOCK := Vector2i(11, 5)
@@ -36,6 +41,25 @@ const WET_SOIL_SWAPS := {
 	"90775eff": Color("54402f"),
 	"816855ff": Color("463426"),
 }
+
+## Painted furniture to bare wood.
+const RUSTIC_SWAPS := {
+	"e46d3aff": Color("a3754e"),
+	"ffad5dff": Color("d78b4a"),
+	"ffcba9ff": Color("f1c471"),
+	"f2ad7dff": Color("d78b4a"),
+}
+## Furniture taken from TilesetElement.png: where each piece is there, how
+## many cells it covers, and where it goes on the new sheet.
+const FURNITURE: Array[Dictionary] = [
+	{"from": Vector2i(3, 9), "cells": Vector2i(1, 1), "to": Vector2i(0, 0)},  # table
+	{"from": Vector2i(0, 9), "cells": Vector2i(1, 1), "to": Vector2i(1, 0)},  # chair
+	{"from": Vector2i(9, 1), "cells": Vector2i(1, 1), "to": Vector2i(2, 0)},  # stool
+	{"from": Vector2i(3, 1), "cells": Vector2i(1, 1), "to": Vector2i(3, 0)},  # trunk
+	{"from": Vector2i(4, 7), "cells": Vector2i(1, 2), "to": Vector2i(0, 1)},  # shelf
+	{"from": Vector2i(6, 7), "cells": Vector2i(2, 2), "to": Vector2i(1, 1)},  # dresser
+]
+const FURNITURE_SHEET := Vector2i(4, 3)
 
 const INSPECTOR_WALK := "res://assets/ninja_adventure/characters/inspector/Walk.png"
 ## The hat is the top eight rows of the figure in every frame.
@@ -66,6 +90,8 @@ func _init() -> void:
 
 	_save(_cowboy(), "cowboy_walk.png")
 	_save(CabinPainter.paint(), "log_cabin.png")
+	_save(RoomPainter.paint(), "cabin_room.png")
+	_save(_furniture(), "cabin_furniture.png")
 	print("Derived art written to ", OUT)
 	quit()
 
@@ -86,6 +112,15 @@ func _swap_colours(img: Image, swaps: Dictionary) -> void:
 			var key := img.get_pixel(x, y).to_html(true)
 			if swaps.has(key):
 				img.set_pixel(x, y, swaps[key])
+
+
+func _furniture() -> Image:
+	var sheet := Image.create_empty(FURNITURE_SHEET.x * T, FURNITURE_SHEET.y * T, false, Image.FORMAT_RGBA8)
+	for piece: Dictionary in FURNITURE:
+		var cut := _cut(PACK + "TilesetElement.png", piece.from, piece.cells)
+		_swap_colours(cut, RUSTIC_SWAPS)
+		sheet.blit_rect(cut, Rect2i(Vector2i.ZERO, cut.get_size()), piece.to * T)
+	return sheet
 
 
 ## The Inspector's walk sheet in ranch clothes. The hat and the coat share a

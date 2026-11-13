@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/world/farm.gd" id="1_farm"]
+[ext_resource type="Script" path="res://scripts/world/world_area.gd" id="1_farm"]
+[ext_resource type="Script" path="res://scripts/world/spawn_point.gd" id="9_spawn"]
 [ext_resource type="PackedScene" path="res://scenes/world/farm_map.tscn" id="2_map"]
 [ext_resource type="Script" path="res://scripts/farming/farm_grid.gd" id="3_grid"]
 [ext_resource type="PackedScene" path="res://scenes/objects/cabin.tscn" id="4_cabin"]
@@ -9,9 +10,11 @@
 [ext_resource type="Script" path="res://scripts/world/water_ambience.gd" id="7_water"]
 [ext_resource type="AudioStream" path="res://assets/derived/river_loop.wav" id="8_river"]
 
-[node name="Farm" type="Node2D"]
+[node name="Farm" type="Node2D" node_paths=PackedStringArray("ground")]
 y_sort_enabled = true
 script = ExtResource("1_farm")
+music = &"farm"
+ground = NodePath("Map/Ground")
 
 [node name="Map" parent="." instance=ExtResource("2_map")]
 
@@ -41,3 +44,9 @@ bus = &"Ambience"
 script = ExtResource("7_water")
 farm_grid = NodePath("../FarmGrid")
 listener = NodePath("../Entities/Player")
+
+[node name="Spawns" type="Node2D" parent="."]
+
+[node name="cabin_door" type="Marker2D" parent="Spawns"]
+position = Vector2(136, 236)
+script = ExtResource("9_spawn")

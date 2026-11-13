@@ -1,0 +1,280 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/world_area.gd" id="1_area"]
+[ext_resource type="Texture2D" path="res://assets/derived/cabin_room.png" id="2_room"]
+[ext_resource type="Texture2D" path="res://assets/derived/cabin_furniture.png" id="3_furniture"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/tilesets/tileset_camp.png" id="4_camp"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/tilesets/TilesetElement.png" id="5_element"]
+[ext_resource type="PackedScene" path="res://scenes/objects/bed.tscn" id="6_bed"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="7_player"]
+[ext_resource type="Script" path="res://scripts/world/area_door.gd" id="8_door"]
+[ext_resource type="Script" path="res://scripts/world/spawn_point.gd" id="9_spawn"]
+
+[sub_resource type="RectangleShape2D" id="Shape_Back"]
+size = Vector2(160, 42)
+
+[sub_resource type="RectangleShape2D" id="Shape_Left"]
+size = Vector2(8, 146)
+
+[sub_resource type="RectangleShape2D" id="Shape_Right"]
+size = Vector2(8, 146)
+
+[sub_resource type="RectangleShape2D" id="Shape_FrontLeft"]
+size = Vector2(72, 9)
+
+[sub_resource type="RectangleShape2D" id="Shape_FrontRight"]
+size = Vector2(72, 9)
+
+[sub_resource type="RectangleShape2D" id="Shape_Threshold"]
+size = Vector2(16, 4)
+
+[sub_resource type="RectangleShape2D" id="Shape_Hearth"]
+size = Vector2(40, 8)
+
+[sub_resource type="AtlasTexture" id="Atlas_Trunk"]
+atlas = ExtResource("3_furniture")
+region = Rect2(48, 0, 16, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_Trunk"]
+size = Vector2(14, 8)
+
+[sub_resource type="AtlasTexture" id="Atlas_Shelf"]
+atlas = ExtResource("3_furniture")
+region = Rect2(0, 16, 16, 32)
+
+[sub_resource type="RectangleShape2D" id="Shape_Shelf"]
+size = Vector2(14, 8)
+
+[sub_resource type="AtlasTexture" id="Atlas_Dresser"]
+atlas = ExtResource("3_furniture")
+region = Rect2(16, 16, 32, 32)
+
+[sub_resource type="RectangleShape2D" id="Shape_Dresser"]
+size = Vector2(30, 14)
+
+[sub_resource type="AtlasTexture" id="Atlas_Chair"]
+atlas = ExtResource("3_furniture")
+region = Rect2(16, 0, 16, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_Chair"]
+size = Vector2(8, 6)
+
+[sub_resource type="AtlasTexture" id="Atlas_Table"]
+atlas = ExtResource("3_furniture")
+region = Rect2(0, 0, 16, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_Table"]
+size = Vector2(14, 9)
+
+[sub_resource type="AtlasTexture" id="Atlas_Stool"]
+atlas = ExtResource("3_furniture")
+region = Rect2(32, 0, 16, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_Stool"]
+size = Vector2(8, 6)
+
+[sub_resource type="AtlasTexture" id="Atlas_Barrel"]
+atlas = ExtResource("4_camp")
+region = Rect2(64, 80, 16, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_Barrel"]
+size = Vector2(12, 8)
+
+[sub_resource type="AtlasTexture" id="Atlas_Pail"]
+atlas = ExtResource("5_element")
+region = Rect2(80, 0, 16, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_Pail"]
+size = Vector2(10, 6)
+
+[sub_resource type="AtlasTexture" id="Atlas_Candle"]
+atlas = ExtResource("4_camp")
+region = Rect2(208, 112, 16, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_Door"]
+size = Vector2(14, 10)
+
+[node name="CabinInterior" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_area")
+music = &"farm"
+extent = Rect2i(0, 0, 160, 146)
+
+[node name="Room" type="Sprite2D" parent="."]
+z_index = -1
+texture = ExtResource("2_room")
+centered = false
+
+[node name="Embers" type="CPUParticles2D" parent="."]
+position = Vector2(122, 30)
+amount = 5
+lifetime = 0.9
+emission_shape = 3
+emission_rect_extents = Vector2(5, 1)
+direction = Vector2(0, -1)
+spread = 15.0
+gravity = Vector2(0, -12)
+initial_velocity_min = 6.0
+initial_velocity_max = 12.0
+color = Color(1, 0.68, 0.36, 1)
+
+[node name="Walls" type="StaticBody2D" parent="."]
+
+[node name="Back" type="CollisionShape2D" parent="Walls"]
+position = Vector2(80, 21)
+shape = SubResource("Shape_Back")
+
+[node name="Left" type="CollisionShape2D" parent="Walls"]
+position = Vector2(4, 73)
+shape = SubResource("Shape_Left")
+
+[node name="Right" type="CollisionShape2D" parent="Walls"]
+position = Vector2(156, 73)
+shape = SubResource("Shape_Right")
+
+[node name="FrontLeft" type="CollisionShape2D" parent="Walls"]
+position = Vector2(36, 141.5)
+shape = SubResource("Shape_FrontLeft")
+
+[node name="FrontRight" type="CollisionShape2D" parent="Walls"]
+position = Vector2(124, 141.5)
+shape = SubResource("Shape_FrontRight")
+
+[node name="Threshold" type="CollisionShape2D" parent="Walls"]
+position = Vector2(80, 148)
+shape = SubResource("Shape_Threshold")
+
+[node name="Hearth" type="CollisionShape2D" parent="Walls"]
+position = Vector2(122, 44)
+shape = SubResource("Shape_Hearth")
+
+[node name="Entities" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Bed" parent="Entities" instance=ExtResource("6_bed")]
+position = Vector2(28, 88)
+
+[node name="Trunk" type="StaticBody2D" parent="Entities"]
+position = Vector2(54, 60)
+
+[node name="Sprite2D" type="Sprite2D" parent="Entities/Trunk"]
+texture = SubResource("Atlas_Trunk")
+centered = false
+offset = Vector2(-8, -16)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Entities/Trunk"]
+position = Vector2(0, -5)
+shape = SubResource("Shape_Trunk")
+
+[node name="Shelf" type="StaticBody2D" parent="Entities"]
+position = Vector2(88, 52)
+
+[node name="Sprite2D" type="Sprite2D" parent="Entities/Shelf"]
+texture = SubResource("Atlas_Shelf")
+centered = false
+offset = Vector2(-8, -32)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Entities/Shelf"]
+position = Vector2(0, -5)
+shape = SubResource("Shape_Shelf")
+
+[node name="Dresser" type="StaticBody2D" parent="Entities"]
+position = Vector2(26, 135)
+
+[node name="Sprite2D" type="Sprite2D" parent="Entities/Dresser"]
+texture = SubResource("Atlas_Dresser")
+centered = false
+offset = Vector2(-16, -32)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Entities/Dresser"]
+position = Vector2(0, -8)
+shape = SubResource("Shape_Dresser")
+
+[node name="Chair" type="StaticBody2D" parent="Entities"]
+position = Vector2(104, 100)
+
+[node name="Sprite2D" type="Sprite2D" parent="Entities/Chair"]
+texture = SubResource("Atlas_Chair")
+centered = false
+offset = Vector2(-8, -16)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Entities/Chair"]
+position = Vector2(0, -4)
+shape = SubResource("Shape_Chair")
+
+[node name="Table" type="StaticBody2D" parent="Entities"]
+position = Vector2(120, 100)
+
+[node name="Sprite2D" type="Sprite2D" parent="Entities/Table"]
+texture = SubResource("Atlas_Table")
+centered = false
+offset = Vector2(-8, -16)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Entities/Table"]
+position = Vector2(0, -6)
+shape = SubResource("Shape_Table")
+
+[node name="Stool" type="StaticBody2D" parent="Entities"]
+position = Vector2(137, 100)
+
+[node name="Sprite2D" type="Sprite2D" parent="Entities/Stool"]
+texture = SubResource("Atlas_Stool")
+centered = false
+offset = Vector2(-8, -16)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Entities/Stool"]
+position = Vector2(0, -4)
+shape = SubResource("Shape_Stool")
+
+[node name="Barrel" type="StaticBody2D" parent="Entities"]
+position = Vector2(142, 135)
+
+[node name="Sprite2D" type="Sprite2D" parent="Entities/Barrel"]
+texture = SubResource("Atlas_Barrel")
+centered = false
+offset = Vector2(-8, -16)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Entities/Barrel"]
+position = Vector2(0, -5)
+shape = SubResource("Shape_Barrel")
+
+[node name="Pail" type="StaticBody2D" parent="Entities"]
+position = Vector2(126, 135)
+
+[node name="Sprite2D" type="Sprite2D" parent="Entities/Pail"]
+texture = SubResource("Atlas_Pail")
+centered = false
+offset = Vector2(-8, -16)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Entities/Pail"]
+position = Vector2(0, -4)
+shape = SubResource("Shape_Pail")
+
+[node name="Candle" type="Sprite2D" parent="Entities"]
+position = Vector2(120, 101)
+texture = SubResource("Atlas_Candle")
+centered = false
+offset = Vector2(-8, -25)
+
+[node name="Player" parent="Entities" instance=ExtResource("7_player")]
+position = Vector2(80, 132)
+
+[node name="Door" type="Area2D" parent="."]
+position = Vector2(80, 141)
+collision_layer = 4
+collision_mask = 0
+monitoring = false
+script = ExtResource("8_door")
+target_scene = "res://scenes/world/farm.tscn"
+target_spawn = &"cabin_door"
+prompt = "Go outside"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Door"]
+shape = SubResource("Shape_Door")
+
+[node name="Spawns" type="Node2D" parent="."]
+
+[node name="door" type="Marker2D" parent="Spawns"]
+position = Vector2(80, 132)
+script = ExtResource("9_spawn")
+facing = Vector2(0, -1)

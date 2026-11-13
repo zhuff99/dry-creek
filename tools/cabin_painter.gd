@@ -183,13 +183,14 @@ static func _roof(img: Image, rng: RandomNumberGenerator) -> void:
 ## A one-pixel dark line around everything drawn, like the pack's own sprites.
 static func _outline(img: Image) -> void:
 	var solid := img.duplicate() as Image
-	for y: int in SIZE.y:
-		for x: int in SIZE.x:
+	var size := img.get_size()
+	for y: int in size.y:
+		for x: int in size.x:
 			if solid.get_pixel(x, y).a > 0.0:
 				continue
 			for step: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 				var at := Vector2i(x, y) + step
-				if at.x >= 0 and at.y >= 0 and at.x < SIZE.x and at.y < SIZE.y and solid.get_pixelv(at).a > 0.0:
+				if at.x >= 0 and at.y >= 0 and at.x < size.x and at.y < size.y and solid.get_pixelv(at).a > 0.0:
 					img.set_pixel(x, y, OUTLINE)
 					break
 

@@ -4,10 +4,14 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="2_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/inventory_panel.tscn" id="3_inventory"]
 [ext_resource type="PackedScene" path="res://scenes/ui/day_transition.tscn" id="4_transition"]
+[ext_resource type="Script" path="res://scripts/world/world.gd" id="5_world"]
+[ext_resource type="Script" path="res://scripts/ui/screen_fade.gd" id="6_fade"]
 
 [node name="Main" type="Node"]
 
-[node name="World" type="Node2D" parent="."]
+[node name="World" type="Node2D" parent="." node_paths=PackedStringArray("fade")]
+script = ExtResource("5_world")
+fade = NodePath("../UI/ScreenFade")
 
 [node name="Farm" parent="World" instance=ExtResource("1_farm")]
 
@@ -17,5 +21,15 @@ process_mode = 3
 [node name="HUD" parent="UI" instance=ExtResource("2_hud")]
 
 [node name="InventoryPanel" parent="UI" instance=ExtResource("3_inventory")]
+
+[node name="ScreenFade" type="ColorRect" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.078, 0.106, 0.106, 1)
+script = ExtResource("6_fade")
 
 [node name="DayTransition" parent="UI" instance=ExtResource("4_transition")]

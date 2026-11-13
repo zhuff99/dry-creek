@@ -32,6 +32,10 @@ signal interaction_prompt_changed(text: String)
 signal toast_requested(text: String)
 
 # --- World ---
+## A door was used: show the area in `scene_path`, with the player on its
+## spawn point named `spawn`. The World node does the swap.
+@warning_ignore("unused_signal")
+signal area_change_requested(scene_path: String, spawn: StringName)
 ## Something happened in the world that an NPC could perceive.
 ## M1 only reports farm events; crimes, gunfire and drawn weapons arrive with
 ## combat (M4) and witnesses subscribe in M5.

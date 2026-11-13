@@ -29,7 +29,7 @@ const EXPECTED_SOUNDS: Array[StringName] = [
 	&"swing", &"till", &"pour", &"refill", &"plant", &"harvest",
 	&"chop", &"tree_fall", &"rock_hit", &"rock_break", &"swing_blade", &"cut",
 	&"ship", &"payout", &"sleep", &"morning",
-	&"select", &"ui_open", &"ui_close", &"ui_pick", &"ui_place", &"error",
+	&"select", &"ui_open", &"ui_close", &"ui_pick", &"ui_place", &"error", &"door",
 ]
 
 var _out_dir := "user://smoke"
@@ -134,15 +134,8 @@ func _run() -> void:
 	await _shot("02_planted_and_watered")
 
 	# --- A watered night grows crops; a dry night does not.
-	# The first night goes through the cabin door with the real interact key.
-	player.global_position = door_spot
-	await _physics_frames(3)
-	_press(&"interact")
-	await _frames(3)
-	_release(&"interact")
-	while paused:
-		await process_frame
-	_check(_clock.day == 2, "using the cabin door sleeps until day 2")
+	await _sleep()
+	_check(_clock.day == 2, "sleeping advances to day 2")
 	_check(_state.farm.get_plot(CORN_CELLS[0]).days_grown == 1, "watered crop grew one day")
 	_check(not _state.farm.get_plot(CORN_CELLS[0]).watered, "soil dries overnight")
 	await _sleep()
@@ -369,6 +362,57 @@ func _run() -> void:
 			# What a click on it would run first: "use the axe" and a buzz.
 			item_user.call(&"_explain_if_useless", cell)
 			break
+	# --- The cabin: in by the door, sleep in the bed, back out. The farm is
+	# freed while inside and rebuilt from GameState on the way out.
+	var world: Node = main.get_node("World")
+	var plots_before: int = _state.farm.plots.size()
+	var day_before: int = _clock.day
+	player.global_position = door_spot
+	await _physics_frames(3)
+	await _use_door()
+	_check(world.area.name == "CabinInterior", "the cabin door leads inside")
+	player = world.area.get_node("Entities/Player")
+	var inside_door: Node2D = world.area.get_node("Spawns/door")
+	_check(player.global_position.distance_to(inside_door.global_position) < 1.0, "the player arrives just inside the door")
+	await _frames(20)
+	await _shot("19_cabin_inside")
+	var bed: Node2D = world.area.get_node("Entities/Bed")
+	player.global_position = bed.global_position + Vector2(24, -8)
+	await _physics_frames(3)
+	_press(&"interact")
+	await _frames(3)
+	_release(&"interact")
+	while paused:
+		await process_frame
+	_check(_clock.day == day_before + 1, "sleeping in the bed starts the next day")
+	_check(world.area.name == "CabinInterior", "and you wake up inside")
+	await _shot("20_by_the_bed")
+	Input.action_press(&"move_up")
+	await _physics_frames(90)
+	Input.action_release(&"move_up")
+	_check(player.global_position.y > 42.0, "the far wall stops the player (y=%.1f)" % player.global_position.y)
+	player.global_position = inside_door.global_position
+	await _physics_frames(3)
+	await _use_door()
+	_check(world.area.name == "Farm", "the door leads back out to the farm")
+	player = world.area.get_node("Entities/Player")
+	_check(world.area.get_node("FarmGrid").cell_at(player.global_position) == CABIN_DOOR_CELL, "onto the cabin's doorstep")
+	var soil: TileMapLayer = world.area.get_node("Map/Soil")
+	_check(plots_before > 0 and soil.get_used_cells().size() == plots_before,
+			"the tilled plots are drawn again (%d)" % soil.get_used_cells().size())
+	var objects_again: TileMapLayer = world.area.get_node("Map/Objects")
+	_check(objects_again.get_cell_source_id(tree) == -1, "the felled tree is still gone")
+	var crops := 0
+	var crops_shown := 0
+	for child: Node in world.area.get_node("Entities").get_children():
+		if child.has_method(&"set_growth"):
+			crops += 1
+			if child.get_node("Sprite2D").texture != null:
+				crops_shown += 1
+	_check(crops > 0 and crops_shown == crops, "the growing crops are drawn again (%d of %d)" % [crops_shown, crops])
+	await _frames(20)
+	await _shot("21_back_outside")
+
 	for cue: StringName in EXPECTED_SOUNDS:
 		_check(audio.play_counts.get(cue, 0) > 0, "sound '%s' played (%d times)" % [cue, audio.play_counts.get(cue, 0)])
 	for cue: StringName in audio.cue_ids():
@@ -392,6 +436,16 @@ func _sleep() -> void:
 	await process_frame
 	while paused:
 		await process_frame
+
+
+## Presses interact at a door and waits for the other side to be shown.
+func _use_door() -> void:
+	_press(&"interact")
+	await _frames(3)
+	_release(&"interact")
+	while paused:
+		await process_frame
+	await _frames(3)
 
 
 func _press(action: StringName) -> void:

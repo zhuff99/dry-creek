@@ -12,7 +12,7 @@ Add one row per pack as it goes into `assets/`. Keep the pack's own license file
 
 | Pack | Author | License | Source URL | Used for | Folder |
 |---|---|---|---|---|---|
-| Ninja Adventure Asset Pack | [Pixel-boy](https://pixel-boy.itch.io/) and [AAA](https://www.instagram.com/challenger.aaa/) | CC0 1.0 (public domain). Attribution not required but appreciated. | https://pixel-boy.itch.io/ninja-adventure-asset-pack | Ground, river, trees, rocks, plants, yard furniture (woodpile, hay, barrel, lantern, hitching rail, clothesline, scarecrow), crate, the base of the player character, tool and resource icons, UI panels, sound effects, music | `assets/ninja_adventure/` (only the files the game uses; license in `LICENSE.txt`) |
+| Ninja Adventure Asset Pack | [Pixel-boy](https://pixel-boy.itch.io/) and [AAA](https://www.instagram.com/challenger.aaa/) | CC0 1.0 (public domain). Attribution not required but appreciated. | https://pixel-boy.itch.io/ninja-adventure-asset-pack | Ground, river, trees, rocks, plants, yard furniture (woodpile, hay, barrel, lantern, hitching rail, clothesline, scarecrow), the bed, barrel, pail and candle in the cabin, crate, the base of the player character, tool and resource icons, UI panels, sound effects, music | `assets/ninja_adventure/` (only the files the game uses; license in `LICENSE.txt`) |
 
 ### Derived art and sound (`assets/derived/`)
 
@@ -22,6 +22,8 @@ Made from Ninja Adventure files by `tools/build_derived_art.gd` and `tools/build
 - `soil_dry.png`, `soil_wet.png`: the pack's soil tiles with the soil colours deepened.
 - `cowboy_walk.png`: the pack's "Inspector" character with his white fedora recoloured into a tan hat with a dark band and his trench coat into a blue work shirt.
 - `log_cabin.png`: not from a pack image. Drawn by `tools/cabin_painter.gd` for this project in the pack's colours, because the pack's buildings are Japanese houses. Original to this project.
+- `cabin_room.png`: the inside of the cabin (log walls, board floor, stone fireplace, rug), drawn the same way by `tools/cabin_room_painter.gd`. Original to this project.
+- `cabin_furniture.png`: the pack's table, chair, stool, trunk, shelf and dresser with their bright orange paint swapped for plain wood colours.
 - `river_loop.wav`: ten seconds of the pack's `River.wav`, mixed to mono and blended end to start so it loops.
 
 ### Placeholder art (`assets/placeholder/`)

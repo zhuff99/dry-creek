@@ -1,8 +1,7 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/objects/cabin.gd" id="1_cabin"]
-[ext_resource type="Texture2D" path="res://assets/derived/log_cabin.png" id="2_sprite"]
-[ext_resource type="Script" path="res://scripts/objects/interactable.gd" id="3_interactable"]
+[ext_resource type="Texture2D" path="res://assets/derived/log_cabin.png" id="1_sprite"]
+[ext_resource type="Script" path="res://scripts/world/area_door.gd" id="2_door"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(84, 26)
@@ -11,10 +10,9 @@ size = Vector2(84, 26)
 size = Vector2(16, 14)
 
 [node name="Cabin" type="StaticBody2D"]
-script = ExtResource("1_cabin")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-texture = ExtResource("2_sprite")
+texture = ExtResource("1_sprite")
 centered = false
 offset = Vector2(-48, -80)
 
@@ -27,8 +25,10 @@ position = Vector2(0, 6)
 collision_layer = 4
 collision_mask = 0
 monitoring = false
-script = ExtResource("3_interactable")
-prompt = "Turn in for the night"
+script = ExtResource("2_door")
+target_scene = "res://scenes/world/cabin_interior.tscn"
+target_spawn = &"door"
+prompt = "Go inside"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Door"]
 shape = SubResource("RectangleShape2D_door")
