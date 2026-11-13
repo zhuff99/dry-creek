@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_script")
 tool_type = 1
+use_animation = 1
 id = &"watering_can"
 display_name = "Watering Can"
 description = "Waters tilled soil. Crops only grow on days they are watered."

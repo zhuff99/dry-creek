@@ -112,16 +112,36 @@ func _tiles() -> Image:
 
 # --- characters and objects --------------------------------------------------
 
+## Three 16x16 frames: facing down, facing right, facing up.
+## Facing left reuses the right frame flipped.
 func _player() -> Image:
-	var img := _new(T, T)
-	_rect(img, 3, 3, 10, 1, Color("5b3a22"))  # hat brim
-	_rect(img, 5, 1, 6, 2, Color("6d4628"))  # hat crown
-	_rect(img, 5, 4, 6, 4, Color("e3b58c"))  # face
-	_rect(img, 6, 5, 1, 1, OUTLINE)
-	_rect(img, 9, 5, 1, 1, OUTLINE)
-	_rect(img, 4, 8, 8, 5, Color("b0392e"))  # shirt
-	_rect(img, 5, 13, 2, 3, Color("3c5a87"))  # legs
-	_rect(img, 9, 13, 2, 3, Color("3c5a87"))
+	var img := _new(T * 3, T)
+	var hat := Color("6d4628")
+	var brim := Color("5b3a22")
+	var skin := Color("e3b58c")
+	var shirt := Color("b0392e")
+	var legs := Color("3c5a87")
+	for frame: int in 3:
+		var ox := frame * T
+		_rect(img, ox + 3, 3, 10, 1, brim)
+		_rect(img, ox + 5, 1, 6, 2, hat)
+		_rect(img, ox + 4, 8, 8, 5, shirt)
+		_rect(img, ox + 5, 13, 2, 3, legs)
+		_rect(img, ox + 9, 13, 2, 3, legs)
+		match frame:
+			0:  # down: full face
+				_rect(img, ox + 5, 4, 6, 4, skin)
+				_rect(img, ox + 6, 5, 1, 1, OUTLINE)
+				_rect(img, ox + 9, 5, 1, 1, OUTLINE)
+			1:  # right: profile, one eye, brim pushed forward
+				_rect(img, ox + 6, 4, 5, 4, skin)
+				_rect(img, ox + 5, 4, 1, 4, hat)
+				_rect(img, ox + 9, 5, 1, 1, OUTLINE)
+				_rect(img, ox + 13, 3, 1, 1, brim)
+			2:  # up: back of the head, suspenders
+				_rect(img, ox + 5, 4, 6, 4, hat.darkened(0.25))
+				_rect(img, ox + 5, 8, 1, 5, shirt.darkened(0.3))
+				_rect(img, ox + 10, 8, 1, 5, shirt.darkened(0.3))
 	return img
 
 

@@ -3,6 +3,7 @@ extends Node2D
 ##
 ## The target is the tile under the mouse, clamped to the tiles touching the
 ## player. A cursor shows it: bright when the click would do something.
+## Holding the button keeps working, one use after another.
 
 enum Action { NONE, HARVEST, TILL, WATER, PLANT }
 
@@ -14,8 +15,11 @@ const CURSOR_INVALID := Color(1, 0.35, 0.3, 0.45)
 var target_cell: Vector2i
 
 var _farm_grid: FarmGrid
+## True from a click that reached the world until the button is let go.
+var _primary_held: bool = false
 
 @onready var _player: Player = owner
+@onready var _animator: PlayerToolAnimator = owner.get_node("ToolAnimator")
 @onready var _cursor: Sprite2D = $TileCursor
 
 
@@ -33,9 +37,17 @@ func _process(_delta: float) -> void:
 	# No cursor at all while holding something that never acts on tiles.
 	_cursor.visible = usable or _holding_farm_item()
 
+	if _primary_held:
+		if not Input.is_action_pressed(&"primary_action"):
+			_primary_held = false
+		elif usable and not _player.busy:
+			use_item_at(target_cell)
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"primary_action"):
+		# Only clicks that reach the world count; clicks on UI never get here.
+		_primary_held = true
 		use_item_at(target_cell)
 	elif event.is_action_pressed(&"hotbar_next"):
 		GameState.select_slot(GameState.selected_slot + 1)
@@ -70,23 +82,37 @@ func action_at(cell: Vector2i) -> Action:
 	return Action.NONE
 
 
+## Uses the selected item on `cell`. Tools play an animation first, so await
+## this if you need to know when the use is over.
 func use_item_at(cell: Vector2i) -> void:
 	var grid := _get_farm_grid()
-	if grid == null:
+	if grid == null or _player.busy:
 		return
 	var where := grid.cell_center(cell)
 	match action_at(cell):
 		Action.HARVEST:
 			_harvest(grid, cell, where)
 		Action.TILL:
-			grid.till(cell)
+			await _use_tool(grid, cell, grid.till.bind(cell))
 		Action.WATER:
-			grid.water(cell)
+			await _use_tool(grid, cell, grid.water.bind(cell))
 		Action.PLANT:
 			var seed_item := GameState.selected_stack().item as SeedData
 			if grid.plant(cell, seed_item.crop):
 				GameState.inventory.remove_from_slot(GameState.selected_slot, 1)
 				EventBus.report(&"crop_planted", _player, where, {"crop": seed_item.crop.id})
+
+
+## Plays the held tool's animation toward `cell`. `effect` runs when it lands.
+func _use_tool(grid: FarmGrid, cell: Vector2i, effect: Callable) -> void:
+	var tool_item := GameState.selected_stack().item as ToolData
+	# One of eight directions; the tile underfoot uses wherever we already face.
+	var offset := cell - grid.cell_at(_player.global_position)
+	var direction := Vector2(offset).normalized() if offset != Vector2i.ZERO else _player.facing
+	_player.busy = true
+	_player.face(direction)
+	await _animator.play(tool_item.use_animation, tool_item.icon, direction, grid.cell_center(cell), effect)
+	_player.busy = false
 
 
 func _harvest(grid: FarmGrid, cell: Vector2i, where: Vector2) -> void:

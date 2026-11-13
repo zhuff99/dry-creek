@@ -12,6 +12,8 @@ const HOE_SLOT := 0
 const CAN_SLOT := 1
 const CORN_SEED_SLOT := 2
 const BEAN_SEED_SLOT := 3
+## Real seconds before the run gives up.
+const WATCHDOG_SECONDS := 90.0
 
 var _out_dir := "user://smoke"
 var _failures := 0
@@ -28,7 +30,15 @@ func _initialize() -> void:
 	if args.size() > 0:
 		_out_dir = args[0]
 	DirAccess.make_dir_recursive_absolute(_out_dir)
+	# A script error would otherwise leave the window open forever.
+	create_timer(WATCHDOG_SECONDS, true, false, true).timeout.connect(_on_watchdog)
 	_run()
+
+
+func _on_watchdog() -> void:
+	print("
+SMOKE TEST: TIMEOUT (a step never finished)")
+	quit(99)
 
 
 func _run() -> void:
@@ -67,19 +77,19 @@ func _run() -> void:
 	all_cells.append_array(BEAN_CELLS)
 	_state.select_slot(HOE_SLOT)
 	for cell: Vector2i in all_cells:
-		item_user.use_item_at(cell)
+		await item_user.use_item_at(cell)
 	_check(_state.farm.plots.size() == 6, "six plots tilled")
 	_state.select_slot(CORN_SEED_SLOT)
 	for cell: Vector2i in CORN_CELLS:
-		item_user.use_item_at(cell)
+		await item_user.use_item_at(cell)
 	_state.select_slot(BEAN_SEED_SLOT)
 	for cell: Vector2i in BEAN_CELLS:
-		item_user.use_item_at(cell)
+		await item_user.use_item_at(cell)
 	_check(_state.inventory.get_slot(CORN_SEED_SLOT).count == 9, "three corn seeds used")
 	_check(_state.inventory.get_slot(BEAN_SEED_SLOT).count == 9, "three bean seeds used")
-	item_user.use_item_at(CORN_CELLS[0])
+	await item_user.use_item_at(CORN_CELLS[0])
 	_check(_state.inventory.get_slot(BEAN_SEED_SLOT).count == 9, "cannot plant on an occupied plot")
-	_water(item_user, all_cells)
+	await _water(item_user, all_cells)
 	_check(_state.farm.get_plot(CORN_CELLS[0]).watered, "plots are watered")
 	await _shot("02_planted_and_watered")
 
@@ -94,19 +104,19 @@ func _run() -> void:
 
 	# --- Water daily. Beans (3 days) ripen a day before corn (4 days).
 	for i: int in 2:
-		_water(item_user, all_cells)
+		await _water(item_user, all_cells)
 		await _sleep()
 	_check(grid.can_harvest(BEAN_CELLS[0]), "beans are ripe after 3 watered days")
 	_check(not grid.can_harvest(CORN_CELLS[0]), "corn is not ripe yet")
 	# Only the corn: clicking a ripe crop picks it, whatever is in hand.
-	_water(item_user, CORN_CELLS)
+	await _water(item_user, CORN_CELLS)
 	await _sleep()
 	_check(grid.can_harvest(CORN_CELLS[0]), "corn is ripe after 4 watered days")
 	await _shot("04_ripe")
 
 	# --- Harvest.
 	for cell: Vector2i in all_cells:
-		item_user.use_item_at(cell)
+		await item_user.use_item_at(cell)
 	var corn: Resource = root.get_node("ItemDB").get_item(&"corn")
 	var corn_slot := _find_slot(corn)
 	_check(corn_slot != -1, "corn is in the inventory")
@@ -160,8 +170,55 @@ func _run() -> void:
 	_check(maxi(reach.x, reach.y) <= 1, "target tile is within reach of the player")
 	_press(&"primary_action")
 	await _frames(2)
+	await _until_idle(player)
+	_release(&"primary_action")
+	# Let the release register, or the held button keeps working the next tile.
+	await _frames(3)
 	_check(_state.farm.is_tilled(target), "left click tills the targeted tile")
-	await _shot("09_end")
+
+	# --- Tool animations, at real speed so the screenshots catch them mid-move.
+	Engine.time_scale = 1.0
+	var stand := Vector2i(26, 11)
+	player.global_position = grid.cell_center(stand) + Vector2(0, 4)
+	await _physics_frames(2)
+	var locked_at := player.global_position
+	item_user.use_item_at(stand + Vector2i.RIGHT)
+	_check(player.busy, "using a tool locks the player")
+	_check(not _state.farm.is_tilled(stand + Vector2i.RIGHT), "tile is not tilled before the swing lands")
+	Input.action_press(&"move_down")
+	await create_timer(0.17).timeout
+	await _shot("09_hoe_swing_right")
+	Input.action_release(&"move_down")
+	await _until_idle(player)
+	_check(player.global_position == locked_at, "player cannot walk during a swing")
+	_check(_state.farm.is_tilled(stand + Vector2i.RIGHT), "tile is tilled once the swing lands")
+	_check(player.facing == Vector2.RIGHT, "player faces the tile being worked")
+
+	item_user.use_item_at(stand + Vector2i.UP)
+	await create_timer(0.1).timeout
+	await _shot("10_hoe_windup_up")
+	await _until_idle(player)
+	_check(player.facing == Vector2.UP, "player turns to face a tile above")
+	item_user.use_item_at(stand + Vector2i.LEFT)
+	await create_timer(0.2).timeout
+	await _shot("11_hoe_strike_left")
+	await _until_idle(player)
+
+	_state.select_slot(CAN_SLOT)
+	item_user.use_item_at(stand + Vector2i.RIGHT)
+	await create_timer(0.3).timeout
+	await _shot("12_watering_right")
+	await _until_idle(player)
+	_check(_state.farm.get_plot(stand + Vector2i.RIGHT).watered, "tile is watered after the pour")
+	item_user.use_item_at(stand + Vector2i.LEFT)
+	await create_timer(0.3).timeout
+	await _shot("13_watering_left")
+	await _until_idle(player)
+	item_user.use_item_at(stand + Vector2i.UP)
+	await create_timer(0.3).timeout
+	await _shot("14_watering_up")
+	await _until_idle(player)
+	_check(not player.busy and not player.get_node("ToolAnimator/HeldTool").visible, "tool is put away afterwards")
 
 	print("\nSMOKE TEST: %s (%d failed)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(_failures)
@@ -170,7 +227,7 @@ func _run() -> void:
 func _water(item_user: Node, cells: Array[Vector2i]) -> void:
 	_state.select_slot(CAN_SLOT)
 	for cell: Vector2i in cells:
-		item_user.use_item_at(cell)
+		await item_user.use_item_at(cell)
 
 
 func _sleep() -> void:
@@ -185,6 +242,19 @@ func _press(action: StringName) -> void:
 	event.action = action
 	event.pressed = true
 	Input.parse_input_event(event)
+
+
+func _release(action: StringName) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = false
+	Input.parse_input_event(event)
+
+
+## Waits for a tool animation to finish.
+func _until_idle(player: Node2D) -> void:
+	while player.busy:
+		await process_frame
 
 
 func _find_slot(item: Resource) -> int:

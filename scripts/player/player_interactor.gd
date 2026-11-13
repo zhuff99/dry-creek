@@ -18,8 +18,9 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"interact") and _current != null:
-		_current.interact(owner as Player)
+	var player := owner as Player
+	if event.is_action_pressed(&"interact") and _current != null and not player.busy:
+		_current.interact(player)
 		get_viewport().set_input_as_handled()
 
 
