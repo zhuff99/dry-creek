@@ -98,6 +98,12 @@ func _build() -> void:
 	_add_button(buttons, "Reset", _reset)
 	_add_button(buttons, "+%d rounds" % SPARE_ROUNDS, _give_rounds)
 	_add_button(buttons, "Bottles", _stand_bottles_up)
+	# Nothing in the world hurts the player yet, so these stand in for it.
+	var health_buttons := HBoxContainer.new()
+	health_buttons.add_theme_constant_override(&"separation", 2)
+	box.add_child(health_buttons)
+	_add_button(health_buttons, "Hurt 2", _hurt_player)
+	_add_button(health_buttons, "Heal", func() -> void: GameState.heal(GameState.max_health))
 
 
 ## Exported whole or decimal numbers that were given a range.
@@ -202,6 +208,12 @@ func _reset() -> void:
 
 func _give_rounds() -> void:
 	GameState.inventory.add_item(_weapon.ammo_item, SPARE_ROUNDS)
+
+
+func _hurt_player() -> void:
+	var player := get_tree().get_first_node_in_group(&"player") as Player
+	if player != null:
+		player.take_damage(2)
 
 
 func _stand_bottles_up() -> void:

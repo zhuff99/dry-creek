@@ -15,13 +15,23 @@ func _ready() -> void:
 	modulate.a = 0.0
 	EventBus.sleep_requested.connect(_run)
 	EventBus.shipment_paid.connect(_on_shipment_paid)
+	EventBus.player_passed_out.connect(_on_player_passed_out)
 
 
 func _on_shipment_paid(total: int) -> void:
 	_last_payout = total
 
 
-func _run() -> void:
+func _on_player_passed_out(money_lost: int) -> void:
+	if money_lost > 0:
+		_run("You passed out.\nGetting you home cost $%d." % money_lost)
+	else:
+		_run("You passed out.")
+
+
+## `headline` is shown above the day when there is something to say about
+## how the night came.
+func _run(headline: String = "") -> void:
 	if _busy:
 		return
 	_busy = true
@@ -31,6 +41,8 @@ func _run() -> void:
 
 	GameClock.advance_day()
 	_label.text = "Day %d" % GameClock.day
+	if headline != "":
+		_label.text = "%s\n%s" % [headline, _label.text]
 	if _last_payout > 0:
 		_label.text += "\nShipped goods sold for $%d" % _last_payout
 	await get_tree().create_timer(HOLD_SECONDS).timeout

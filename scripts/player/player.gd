@@ -11,6 +11,10 @@ const COLUMN_LEFT := 2
 const COLUMN_RIGHT := 3
 const WALK_FRAMES := 4
 const WALK_FPS := 8.0
+## Seconds after being hurt during which nothing else can hurt you.
+const HURT_GRACE := 0.6
+const HURT_TINT := Color(1.0, 0.35, 0.3)
+const HURT_SHAKE := 3.0
 
 @export var move_speed: float = 80.0
 
@@ -31,7 +35,11 @@ var aim_pose: bool = false:
 		if is_node_ready():
 			_update_sprite()
 
+## Which of the four walk frames is showing (0 when standing).
+var walk_frame: int = 0
+
 var _walk_time: float = 0.0
+var _grace_left: float = 0.0
 
 @onready var _sprite: Sprite2D = $Sprite2D
 @onready var _aim_sprite: Sprite2D = $AimSprite
@@ -39,7 +47,12 @@ var _walk_time: float = 0.0
 @onready var _camera: Camera2D = $Camera2D
 
 
+func _ready() -> void:
+	add_to_group(&"player")
+
+
 func _physics_process(delta: float) -> void:
+	_grace_left = maxf(0.0, _grace_left - delta)
 	var input := Vector2.ZERO
 	if not busy:
 		input = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
@@ -82,13 +95,31 @@ func _update_sprite() -> void:
 		# The stance has no walk cycle; a one-pixel bob stands in for steps.
 		var bob := int(_walk_time * WALK_FPS) % 2 if _walk_time > 0.0 else 0
 		_aim_sprite.position = _sprite_home + Vector2(0, bob)
+		walk_frame = 0
 		return
 	# Standing still shows the first frame; walking starts on the second so
 	# the first step is visible straight away.
 	var row := 0
 	if _walk_time > 0.0:
 		row = (int(_walk_time * WALK_FPS) + 1) % WALK_FRAMES
+	walk_frame = row
 	_sprite.frame_coords = Vector2i(column, row)
+
+
+## Something hurt the player. Health itself lives in GameState; this is the
+## flinch, and the moment of grace so one bite is not three.
+func take_damage(amount: int) -> void:
+	if _grace_left > 0.0 or amount <= 0:
+		return
+	_grace_left = HURT_GRACE
+	Audio.play(&"hurt")
+	shake(HURT_SHAKE)
+	_sprite.modulate = HURT_TINT
+	_aim_sprite.modulate = HURT_TINT
+	var tween := create_tween().set_parallel()
+	tween.tween_property(_sprite, "modulate", Color.WHITE, HURT_GRACE)
+	tween.tween_property(_aim_sprite, "modulate", Color.WHITE, HURT_GRACE)
+	GameState.hurt(amount)
 
 
 ## Knocks the body a little way and lets it settle back (a gun's recoil).

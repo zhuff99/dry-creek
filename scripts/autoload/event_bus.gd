@@ -31,6 +31,14 @@ signal interaction_prompt_changed(text: String)
 @warning_ignore("unused_signal")
 signal toast_requested(text: String)
 
+# --- Health ---
+@warning_ignore("unused_signal")
+signal health_changed(health: int, max_health: int)
+## Health ran out. The night passes, the player wakes at home, and
+## `money_lost` has already been taken.
+@warning_ignore("unused_signal")
+signal player_passed_out(money_lost: int)
+
 # --- Weapons ---
 ## The player's gun came out of, or went back into, its holster.
 @warning_ignore("unused_signal")

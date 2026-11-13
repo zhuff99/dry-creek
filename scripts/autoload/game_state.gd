@@ -19,6 +19,9 @@ const STARTING_ITEMS := {
 	&"bean_seeds": 12,
 	&"revolver_rounds": 24,
 }
+const STARTING_HEALTH := 10
+## Share of your money that passing out costs (someone has to get you home).
+const PASS_OUT_COST := 0.1
 ## The gun the ranch came with. It is worn, not carried in the bag.
 const STARTING_WEAPON := &"revolver"
 
@@ -26,6 +29,11 @@ var money: int = 0
 var inventory := Inventory.new(INVENTORY_SIZE)
 var farm := FarmData.new()
 var selected_slot: int = 0
+var max_health: int = STARTING_HEALTH
+var health: int = STARTING_HEALTH:
+	set(value):
+		health = clampi(value, 0, max_health)
+		EventBus.health_changed.emit(health, max_health)
 ## The gun on the player's hip, or null if they own none.
 var weapon: WeaponData
 ## Rounds in that gun right now.
@@ -50,6 +58,24 @@ func add_money(amount: int) -> void:
 	EventBus.money_changed.emit(money)
 
 
+## Takes health away. At nothing, the player passes out: the day ends, a
+## share of their money goes, and they wake at home (World and the day
+## transition do the rest).
+func hurt(amount: int) -> void:
+	if health <= 0:
+		return
+	health -= amount
+	if health <= 0:
+		var lost := int(money * PASS_OUT_COST)
+		if lost > 0:
+			add_money(-lost)
+		EventBus.player_passed_out.emit(lost)
+
+
+func heal(amount: int) -> void:
+	health += amount
+
+
 func select_slot(index: int) -> void:
 	selected_slot = posmod(index, HOTBAR_SIZE)
 	EventBus.hotbar_slot_selected.emit(selected_slot)
@@ -72,6 +98,8 @@ func shipping_bin_value() -> int:
 
 
 func _on_day_ended(_day: int) -> void:
+	# A night's sleep mends everything, for now.
+	health = max_health
 	farm.advance_day()
 	var total := shipping_bin_value()
 	shipping_bin.clear()

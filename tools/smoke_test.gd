@@ -30,7 +30,7 @@ const EXPECTED_SOUNDS: Array[StringName] = [
 	&"chop", &"tree_fall", &"rock_hit", &"rock_break", &"swing_blade", &"cut",
 	&"ship", &"payout", &"sleep", &"morning",
 	&"select", &"ui_open", &"ui_close", &"ui_pick", &"ui_place", &"error", &"door",
-	&"gun_draw", &"gun_holster", &"gunshot", &"gun_empty", &"gun_load", &"bottle_break",
+	&"gun_draw", &"gun_holster", &"gunshot", &"gun_empty", &"gun_load", &"bottle_break", &"hurt",
 ]
 ## Where the test stands to shoot: in the field, four tiles north of the
 ## bottles on the practice rail.
@@ -486,6 +486,18 @@ func _run() -> void:
 		await _frames(3)
 	_check(not player.get_node("AimSprite").visible and held.visible, "lowering the gun returns to the normal stance, gun at the side")
 	await _shot("20_lowered")
+	# Walking with the gun out: it rides in the hand, which swings.
+	var hand_spots := {}
+	Input.action_press(&"move_right")
+	for i: int in 40:
+		await physics_frame
+		hand_spots[(held.global_position - player.global_position).round()] = true
+		if i == 12:
+			await _shot("20_walking_armed")
+	Input.action_release(&"move_right")
+	_check(hand_spots.size() >= 2, "walking with the gun out, it follows the swinging hand (%d positions)" % hand_spots.size())
+	player.global_position = FIRING_SPOT
+	await _physics_frames(3)
 	_press(&"reload")
 	await create_timer(0.3).timeout
 	await _shot("20_loading")
@@ -523,6 +535,16 @@ func _run() -> void:
 	await create_timer(0.6).timeout
 	_check(not held.visible, "and the gun is out of sight once it is holstered")
 
+	# --- Health: a hit takes some, a second hit straight after does not.
+	var health_bar: ProgressBar = main.get_node("UI/HUD/TopBar/Health/Bar")
+	_check(_state.health == 10 and _state.max_health == 10 and health_bar.value == 10.0, "the player starts at full health (10)")
+	player.take_damage(3)
+	player.take_damage(3)
+	await _frames(2)
+	_check(_state.health == 7, "a hit takes health, and a second hit in the same moment is shrugged off (%d left)" % _state.health)
+	_check(health_bar.value == 7.0, "the health bar shows it")
+	await _shot("21_hurt")
+
 	# --- The cabin: in by the door, sleep in the bed, back out. The farm is
 	# freed while inside and rebuilt from GameState on the way out.
 	var world: Node = main.get_node("World")
@@ -546,6 +568,7 @@ func _run() -> void:
 	while paused:
 		await process_frame
 	_check(_clock.day == day_before + 1, "sleeping in the bed starts the next day")
+	_check(_state.health == _state.max_health, "a night's sleep restores health")
 	_check(world.area.name == "CabinInterior", "and you wake up inside")
 	await _shot("23_by_the_bed")
 	Input.action_press(&"move_up")
@@ -573,6 +596,23 @@ func _run() -> void:
 	_check(crops > 0 and crops_shown == crops, "the growing crops are drawn again (%d of %d)" % [crops_shown, crops])
 	await _frames(20)
 	await _shot("24_back_outside")
+
+	# --- Passing out: health runs out on the farm, you wake at home, poorer.
+	var day_at_collapse: int = _clock.day
+	var money_at_collapse: int = _state.money
+	player.take_damage(99)
+	await _frames(3)
+	while paused:
+		await process_frame
+	await _frames(3)
+	_check(_clock.day == day_at_collapse + 1, "running out of health ends the day")
+	_check(world.area.name == "CabinInterior", "you wake up inside the cabin")
+	player = world.area.get_node("Entities/Player")
+	_check(player.global_position.distance_to(world.area.get_node("Spawns/bed").global_position) < 1.0, "beside the bed")
+	_check(_state.health == _state.max_health, "at full health")
+	_check(money_at_collapse >= 10 and _state.money == money_at_collapse - int(money_at_collapse * 0.1),
+			"and a tenth of your money is gone ($%d to $%d)" % [money_at_collapse, _state.money])
+	await _shot("25_woke_at_home")
 
 	for cue: StringName in EXPECTED_SOUNDS:
 		_check(audio.play_counts.get(cue, 0) > 0, "sound '%s' played (%d times)" % [cue, audio.play_counts.get(cue, 0)])

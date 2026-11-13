@@ -15,6 +15,12 @@ content_margin_top = 2.0
 content_margin_right = 5.0
 content_margin_bottom = 2.0
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_back"]
+bg_color = Color(0.08, 0.05, 0.03, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_fill"]
+bg_color = Color(0.878, 0.224, 0.298, 1)
+
 [node name="HUD" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -40,6 +46,24 @@ mouse_filter = 2
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
 text = "Day 1"
+
+[node name="Health" type="PanelContainer" parent="TopBar"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_backing")
+
+[node name="Bar" type="ProgressBar" parent="TopBar/Health"]
+custom_minimum_size = Vector2(52, 6)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_health_back")
+theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
+max_value = 10.0
+step = 1.0
+value = 10.0
+show_percentage = false
 
 [node name="Spacer" type="Control" parent="TopBar"]
 layout_mode = 2

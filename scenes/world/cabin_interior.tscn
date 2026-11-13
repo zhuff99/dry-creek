@@ -278,3 +278,7 @@ shape = SubResource("Shape_Door")
 position = Vector2(80, 132)
 script = ExtResource("9_spawn")
 facing = Vector2(0, -1)
+
+[node name="bed" type="Marker2D" parent="Spawns"]
+position = Vector2(54, 84)
+script = ExtResource("9_spawn")

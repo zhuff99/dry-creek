@@ -27,17 +27,20 @@ const AIM_FISTS := {
 	Vector2.DOWN: Vector2(-2.5, -0.5),
 	Vector2.UP: Vector2(-3.5, -15.5),
 }
-## Gun out but lowered: the hand at the character's side and the angle the
-## barrel hangs at, for each way the body faces.
+## Gun out but lowered: where the gun hand is in each of the four walk
+## frames, for each way the body faces, measured from the feet. Read off
+## the walk sheet (cowboy_walk.png), so the gun swings with the arm. Where
+## the arm is swung back out of sight, the spot is a guess beside the hip.
 const LOWERED_HANDS := {
-	Vector2.LEFT: Vector2(-3.0, -4.0),
-	Vector2.RIGHT: Vector2(3.0, -4.0),
-	Vector2.DOWN: Vector2(6.0, -5.0),
-	Vector2.UP: Vector2(-6.0, -5.0),
+	Vector2.DOWN: [Vector2(6.0, -2.5), Vector2(3.0, -3.0), Vector2(6.0, -2.5), Vector2(6.0, -4.0)],
+	Vector2.UP: [Vector2(6.0, -3.0), Vector2(6.0, -4.0), Vector2(6.0, -3.0), Vector2(4.0, -4.0)],
+	Vector2.LEFT: [Vector2(1.0, -2.5), Vector2(-4.0, -4.0), Vector2(1.0, -2.5), Vector2(2.0, -4.0)],
+	Vector2.RIGHT: [Vector2(-1.0, -2.5), Vector2(4.0, -4.0), Vector2(-1.0, -2.5), Vector2(-2.0, -4.0)],
 }
+## The angle the barrel hangs at when lowered: down and a little forward.
 const LOWERED_ANGLES := {
-	Vector2.LEFT: 2.2,
-	Vector2.RIGHT: 0.95,
+	Vector2.LEFT: PI - 0.7,
+	Vector2.RIGHT: 0.7,
 	Vector2.DOWN: PI / 2.0,
 	Vector2.UP: PI / 2.0,
 }
@@ -291,7 +294,7 @@ func _show_cone(weapon: WeaponData, direction: Vector2) -> void:
 ## of a round going in are added on top.
 func _pose_gun(direction: Vector2, loading: bool) -> void:
 	var facing := _player.facing
-	var hand: Vector2 = LOWERED_HANDS[facing]
+	var hand: Vector2 = LOWERED_HANDS[facing][_player.walk_frame]
 	var angle: float = LOWERED_ANGLES[facing]
 	if aiming:
 		hand = AIM_FISTS[facing]

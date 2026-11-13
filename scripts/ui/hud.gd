@@ -1,5 +1,6 @@
 extends Control
-## Always-on overlay: day, money, held item name, interaction prompt, toasts.
+## Always-on overlay: day, health, money, held item name, interaction prompt,
+## toasts.
 
 const TOAST_HOLD_SECONDS := 2.5
 const TOAST_FADE_SECONDS := 0.5
@@ -9,6 +10,7 @@ var _gun_drawn: bool = false
 
 @onready var _day_label: Label = $TopBar/DayLabel
 @onready var _money_label: Label = $TopBar/MoneyLabel
+@onready var _health_bar: ProgressBar = $TopBar/Health/Bar
 @onready var _toast_label: Label = $ToastRow/ToastLabel
 @onready var _prompt_label: Label = $Bottom/PromptLabel
 @onready var _item_label: Label = $Bottom/ItemLabel
@@ -23,6 +25,8 @@ func _ready() -> void:
 	GameState.inventory.changed.connect(_refresh_item_label)
 	EventBus.weapon_drawn_changed.connect(_on_weapon_drawn_changed)
 	EventBus.rounds_changed.connect(func(_loaded: int) -> void: _refresh_item_label())
+	EventBus.health_changed.connect(_on_health_changed)
+	_on_health_changed(GameState.health, GameState.max_health)
 	_on_day_started(GameClock.day)
 	_on_money_changed(GameState.money)
 	_on_prompt_changed("")
@@ -32,6 +36,16 @@ func _ready() -> void:
 
 func _on_day_started(day: int) -> void:
 	_set_text(_day_label, "Day %d" % day)
+
+
+func _on_health_changed(health: int, max_health: int) -> void:
+	var dropped := health < _health_bar.value
+	_health_bar.max_value = max_health
+	_health_bar.value = health
+	if dropped:
+		# Flash the bar so a hit is noticed even when looking elsewhere.
+		_health_bar.modulate = Color(3, 3, 3)
+		create_tween().tween_property(_health_bar, "modulate", Color.WHITE, 0.35)
 
 
 func _on_money_changed(amount: int) -> void:
