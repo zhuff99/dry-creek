@@ -11,3 +11,5 @@ extends Resource
 @export_range(1, 999) var max_stack: int = 99
 ## What the shipping crate pays per unit. 0 means it cannot be sold.
 @export var sell_price: int = 0
+## What a shop charges per unit. 0 means no shop stocks it. (Shops arrive in M3.)
+@export var buy_price: int = 0

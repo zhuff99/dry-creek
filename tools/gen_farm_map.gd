@@ -92,8 +92,10 @@ func _build_tileset() -> TileSet:
 	tile_set.set_physics_layer_collision_layer(0, 1)  # "world"
 	tile_set.set_physics_layer_collision_mask(0, 0)
 	# Custom data read by FarmGrid.
-	_add_bool_layer(tile_set, 0, "tillable")
-	_add_bool_layer(tile_set, 1, "water")
+	_add_data_layer(tile_set, 0, "tillable", TYPE_BOOL)
+	_add_data_layer(tile_set, 1, "water", TYPE_BOOL)
+	# Id of the DebrisData resource (res://resources/debris) an object tile is.
+	_add_data_layer(tile_set, 2, "debris", TYPE_STRING)
 
 	var source := TileSetAtlasSource.new()
 	source.texture = texture
@@ -130,6 +132,7 @@ func _build_tileset() -> TileSet:
 	for coords: Vector2i in ROCKS:
 		source.create_tile(coords)
 		var rock := source.get_tile_data(coords, 0)
+		rock.set_custom_data("debris", "rock")
 		rock.y_sort_origin = 5
 		_add_collision(rock, _box(-6, -2, 6, 7))
 	for coords: Vector2i in TREES:
@@ -138,19 +141,22 @@ func _build_tileset() -> TileSet:
 		# Lift the 16x32 art so the trunk stands in the cell and the canopy
 		# overhangs the cell above.
 		tree.texture_origin = Vector2i(0, 8)
+		tree.set_custom_data("debris", "tree")
 		tree.y_sort_origin = 6
 		_add_collision(tree, _box(-3, 1, 3, 8))
 	# Grass and weeds can be walked through.
 	for coords: Vector2i in GRASS + WEEDS:
 		source.create_tile(coords)
-		source.get_tile_data(coords, 0).y_sort_origin = 6
+		var brush := source.get_tile_data(coords, 0)
+		brush.set_custom_data("debris", "grass" if GRASS.has(coords) else "weed")
+		brush.y_sort_origin = 6
 	return tile_set
 
 
-func _add_bool_layer(tile_set: TileSet, index: int, layer_name: String) -> void:
+func _add_data_layer(tile_set: TileSet, index: int, layer_name: String, type: Variant.Type) -> void:
 	tile_set.add_custom_data_layer()
 	tile_set.set_custom_data_layer_name(index, layer_name)
-	tile_set.set_custom_data_layer_type(index, TYPE_BOOL)
+	tile_set.set_custom_data_layer_type(index, type)
 
 
 func _box(left: float, top: float, right: float, bottom: float) -> PackedVector2Array:

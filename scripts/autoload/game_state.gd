@@ -7,9 +7,14 @@ extends Node
 const INVENTORY_SIZE := 27
 const HOTBAR_SIZE := 9
 ## Item id -> count handed to a new game, in hotbar order.
+## The axe, pickaxe and scythe are here only until the town exists (M3): they
+## will be bought there instead, and should then be removed from this list.
 const STARTING_ITEMS := {
 	&"hoe": 1,
 	&"watering_can": 1,
+	&"axe": 1,
+	&"pickaxe": 1,
+	&"scythe": 1,
 	&"corn_seeds": 12,
 	&"bean_seeds": 12,
 }

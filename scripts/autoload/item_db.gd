@@ -1,14 +1,16 @@
 extends Node
-## Index of every item and crop resource by id (autoload "ItemDB").
+## Index of every item, crop and debris resource by id (autoload "ItemDB").
 ##
 ## Anything that needs to persist (inventory, farm plots) stores ids and looks
 ## the resource up here, so save files never contain object references.
 
 const ITEM_DIR := "res://resources/items"
 const CROP_DIR := "res://resources/crops"
+const DEBRIS_DIR := "res://resources/debris"
 
 var _items: Dictionary[StringName, ItemData] = {}
 var _crops: Dictionary[StringName, CropData] = {}
+var _debris: Dictionary[StringName, DebrisData] = {}
 
 
 func _ready() -> void:
@@ -20,6 +22,10 @@ func _ready() -> void:
 		var crop := res as CropData
 		if crop != null:
 			_crops[crop.id] = crop
+	for res: Resource in _load_all(DEBRIS_DIR):
+		var debris := res as DebrisData
+		if debris != null:
+			_debris[debris.id] = debris
 
 
 func get_item(id: StringName) -> ItemData:
@@ -34,6 +40,13 @@ func get_crop(id: StringName) -> CropData:
 	if crop == null:
 		push_error("ItemDB: unknown crop id '%s'" % id)
 	return crop
+
+
+func get_debris(id: StringName) -> DebrisData:
+	var debris: DebrisData = _debris.get(id)
+	if debris == null:
+		push_error("ItemDB: unknown debris id '%s'" % id)
+	return debris
 
 
 func _load_all(dir_path: String) -> Array[Resource]:

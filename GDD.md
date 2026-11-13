@@ -25,7 +25,9 @@ Pillars:
 
 ### 3.1 Ranch restoration
 - The ranch is open dirt, not sand: all bare ground can be tilled. It starts overgrown, with rocks, trees, weeds, and grass covering most of it, so usable land is whatever has been cleared.
-- Debris is cleared with tools (pickaxe for rocks, axe for trees, scythe or hands for weeds and grass) and costs stamina. Rocks and trees block movement; weeds and grass only block tilling.
+- Debris is cleared with tools: pickaxe for rocks (2 hits, drops stone), axe for trees (3 hits, drops wood), scythe for weeds and grass (1 hit, drops fiber). It will cost stamina once stamina exists. Rocks and trees block movement; weeds and grass only block tilling.
+- The axe, pickaxe and scythe are bought in town. Until the town exists (M3) they are in the starting kit.
+- Wood, stone and fiber are the materials the carpenter asks for.
 - Broken structures (fence, barn, coop, well) are repaired or rebuilt through the carpenter for money plus materials.
 - Land expands in tiers; each tier is gated by a carpenter job or a cleared obstacle.
 
@@ -177,8 +179,8 @@ Everything hangs off one mechanism: **actions emit world events, and only NPCs w
 | # | Name | Scope |
 |---|---|---|
 | **M1** | Farming vertical slice | Movement and camera, farm map, till/plant/water/harvest two crops, inventory and hotbar, day counter, sleep, shipping crate. |
-| **M2** | The working day | Clock and day/night tint, stamina, the broken well, debris clearing (axe, pickaxe, scythe), crop withering, save/load on sleep, title/new-game flow. Watering can capacity and river refill are already in. |
-| **M3** | Town and economy | Area transitions, town map, general store (buy seeds, sell goods), carpenter (first well and fence repairs), NPCs with schedules and basic dialogue, sheriff and deputies present as residents. |
+| **M2** | The working day | Clock and day/night tint, stamina, the broken well, clearing costs stamina, crop withering, save/load on sleep, title/new-game flow. Watering can capacity, river refill and debris clearing are already in. |
+| **M3** | Town and economy | Area transitions, town map, general store (buy seeds and the axe, pickaxe and scythe, which then leave the starting kit; sell goods), carpenter (first well and fence repairs), NPCs with schedules and basic dialogue, sheriff and deputies present as residents. |
 | **M4** | Combat core | Draw/holster, aim line, firing, reloading, revolver, player health, first wildlife (snake, coyote), first badlands map with valuables. |
 | **M5** | Law and wanted v1 | Perception, townsfolk reactions, witnesses and reporting, bribe/intimidate, bounty, arrest, jail day-skip, pay-off, deputy replacement. |
 | **M6** | Animals and seasons | Coop and barn, chickens, cattle, feed, horse and mounting, full season calendar, irrigation. |

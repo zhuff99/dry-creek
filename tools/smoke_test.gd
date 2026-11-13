@@ -10,8 +10,11 @@ const CORN_CELLS: Array[Vector2i] = [Vector2i(17, 17), Vector2i(18, 17), Vector2
 const BEAN_CELLS: Array[Vector2i] = [Vector2i(17, 19), Vector2i(18, 19), Vector2i(19, 19)]
 const HOE_SLOT := 0
 const CAN_SLOT := 1
-const CORN_SEED_SLOT := 2
-const BEAN_SEED_SLOT := 3
+const AXE_SLOT := 2
+const PICKAXE_SLOT := 3
+const SCYTHE_SLOT := 4
+const CORN_SEED_SLOT := 5
+const BEAN_SEED_SLOT := 6
 const CAN_CAPACITY := 20
 ## Where the trail from the cabin meets the river.
 const BANK_CELL := Vector2i(13, 4)
@@ -256,6 +259,64 @@ func _run() -> void:
 	await item_user.use_item_at(RIVER_CELL)
 	_check(not player.busy, "a full can does not refill again")
 	Engine.time_scale = 3.0
+
+	# --- Clearing: each kind of debris needs its own tool and number of hits.
+	var item_db: Node = root.get_node("ItemDB")
+	var targets := {}
+	for cell: Vector2i in objects.get_used_cells():
+		var kind: StringName = grid.debris_at(cell).id
+		# Rows near the top are the far bank of the river, which is out of reach.
+		if cell.y > 8 and not targets.has(kind):
+			targets[kind] = cell
+	_check(targets.size() == 4, "the map has trees, rocks, weeds and grass")
+	var tree: Vector2i = targets[&"tree"]
+	var rock: Vector2i = targets[&"rock"]
+	var weed: Vector2i = targets[&"weed"]
+	var grass: Vector2i = targets[&"grass"]
+
+	player.global_position = grid.cell_center(tree + Vector2i.DOWN) + Vector2(0, 4)
+	await _physics_frames(2)
+	_state.select_slot(PICKAXE_SLOT)
+	await item_user.use_item_at(tree)
+	_check(grid.is_blocked(tree) and _state.farm.debris_damage.is_empty(), "a pickaxe does nothing to a tree")
+	_state.select_slot(AXE_SLOT)
+	await item_user.use_item_at(tree)
+	await item_user.use_item_at(tree)
+	_check(grid.is_blocked(tree), "a tree is still standing after two axe hits")
+	Engine.time_scale = 1.0
+	item_user.use_item_at(tree)
+	await create_timer(0.2).timeout
+	await _shot("17_axe_swing")
+	await _until_idle(player)
+	Engine.time_scale = 3.0
+	_check(not grid.is_blocked(tree), "the third hit fells the tree")
+	_check(_find_slot(item_db.get_item(&"wood")) != -1, "the tree drops wood")
+	_check(grid.can_till(tree), "cleared ground can be tilled")
+	_check(_state.farm.cleared_debris.has(tree), "the cleared tile is remembered")
+
+	player.global_position = grid.cell_center(rock + Vector2i.DOWN) + Vector2(0, 4)
+	await _physics_frames(2)
+	_state.select_slot(AXE_SLOT)
+	await item_user.use_item_at(rock)
+	_check(grid.is_blocked(rock) and _state.farm.debris_damage.is_empty(), "an axe does nothing to a rock")
+	_state.select_slot(PICKAXE_SLOT)
+	await item_user.use_item_at(rock)
+	_check(grid.is_blocked(rock), "a rock survives one pickaxe hit")
+	await item_user.use_item_at(rock)
+	_check(not grid.is_blocked(rock), "the second hit breaks the rock")
+	_check(_find_slot(item_db.get_item(&"stone")) != -1, "the rock drops stone")
+
+	_state.select_slot(SCYTHE_SLOT)
+	player.global_position = grid.cell_center(weed + Vector2i.DOWN) + Vector2(0, 4)
+	await _physics_frames(2)
+	await item_user.use_item_at(weed)
+	_check(not grid.is_blocked(weed), "the scythe cuts a weed in one hit")
+	_check(_find_slot(item_db.get_item(&"fiber")) != -1, "the weed drops fiber")
+	player.global_position = grid.cell_center(grass + Vector2i.DOWN) + Vector2(0, 4)
+	await _physics_frames(2)
+	await item_user.use_item_at(grass)
+	_check(not grid.is_blocked(grass), "the scythe cuts grass in one hit")
+	await _shot("18_after_clearing")
 
 	print("\nSMOKE TEST: %s (%d failed)" % ["PASS" if _failures == 0 else "FAIL", _failures])
 	quit(_failures)

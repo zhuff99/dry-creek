@@ -22,6 +22,8 @@ const HAND := Vector2(0, -7)
 const ICON_ANGLE := -PI / 4.0
 ## Pixel of a swung icon that sits in the hand (the bottom of the handle).
 const GRIP_PIXEL := Vector2(3, 13)
+## Default colour of the burst thrown up when a swing lands.
+const DIRT_COLOR := Color(0.42, 0.28, 0.17)
 ## How far the body leans into a strike.
 const LUNGE_PIXELS := 2.0
 ## How far from the hand the watering can is held out.
@@ -41,9 +43,15 @@ func _ready() -> void:
 
 ## Plays one tool use and returns when it is over (await it).
 ## `direction` points from the player to the tile, `target` is the tile centre,
-## and `on_impact` is called at the moment the tool takes effect.
+## `on_impact` is called at the moment the tool takes effect, and `chips` is
+## the colour of what a swing knocks loose.
 func play(
-	kind: ToolData.UseAnimation, icon: Texture2D, direction: Vector2, target: Vector2, on_impact: Callable
+	kind: ToolData.UseAnimation,
+	icon: Texture2D,
+	direction: Vector2,
+	target: Vector2,
+	on_impact: Callable,
+	chips: Color = DIRT_COLOR,
 ) -> void:
 	_held.texture = icon
 	show_behind_parent = false
@@ -56,14 +64,14 @@ func play(
 		_:
 			# Chopping at a tile above: the tool passes behind the character.
 			show_behind_parent = direction.y < -0.5
-			tween = _swing(direction, target, on_impact)
+			tween = _swing(direction, target, on_impact, chips)
 	_held.show()
 	await tween.finished
 	_held.hide()
 
 
 ## Overhead chop: raise the tool back, bring it down on the tile.
-func _swing(direction: Vector2, target: Vector2, on_impact: Callable) -> Tween:
+func _swing(direction: Vector2, target: Vector2, on_impact: Callable, chips: Color) -> Tween:
 	_held.centered = false
 	_held.offset = -GRIP_PIXEL
 	_held.flip_h = false
@@ -82,7 +90,7 @@ func _swing(direction: Vector2, target: Vector2, on_impact: Callable) -> Tween:
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tween.parallel().tween_property(body, "position", body_home + direction * LUNGE_PIXELS, SWING_STRIKE)
 	tween.tween_callback(on_impact)
-	tween.tween_callback(_burst_dirt.bind(target))
+	tween.tween_callback(_burst.bind(target, chips))
 	tween.tween_property(body, "position", body_home, SWING_RECOVER)
 	return tween
 
@@ -134,6 +142,7 @@ func _dip(direction: Vector2, on_impact: Callable) -> Tween:
 	return tween
 
 
-func _burst_dirt(at: Vector2) -> void:
+func _burst(at: Vector2, color: Color) -> void:
 	_dirt.global_position = at
+	_dirt.color = color
 	_dirt.restart()

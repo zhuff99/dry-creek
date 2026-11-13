@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="DebrisData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/debris_data.gd" id="1_script"]
+[ext_resource type="Resource" path="res://resources/items/fiber.tres" id="2_drop"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"grass"
+display_name = "Grass"
+tool = 4
+hits = 1
+drop_item = ExtResource("2_drop")
+drop_min = 0
+drop_max = 1
+chip_color = Color(0.56, 0.6, 0.27, 1)

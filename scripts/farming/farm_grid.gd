@@ -8,6 +8,8 @@ const TILE_SOURCE_ID := 0
 ## TileSet custom data layers: ground the hoe can till, and open water.
 const TILLABLE_LAYER := "tillable"
 const WATER_LAYER := "water"
+## Custom data on Objects-layer tiles: the id of a DebrisData resource.
+const DEBRIS_LAYER := "debris"
 
 @export var ground_layer: TileMapLayer
 ## Overlay layer that shows tilled and watered soil on top of the ground.
@@ -28,6 +30,10 @@ func _ready() -> void:
 	add_to_group(&"farm_grid")
 	_farm = GameState.farm
 	_farm.plot_changed.connect(_refresh_cell)
+	_farm.debris_cleared.connect(_remove_debris_tile)
+	# The saved map always has every rock and tree; take out the cleared ones.
+	for cell: Vector2i in _farm.cleared_debris:
+		_remove_debris_tile(cell)
 	# Redraw whatever already exists (returning to the farm, or a loaded save).
 	for cell: Vector2i in _farm.plots:
 		_refresh_cell(cell)
@@ -55,6 +61,24 @@ func is_water(cell: Vector2i) -> bool:
 ## True if a rock, tree, weed or grass tuft occupies the cell.
 func is_blocked(cell: Vector2i) -> bool:
 	return objects_layer != null and objects_layer.get_cell_source_id(cell) != -1
+
+
+## The clearable thing at `cell`, or null. Decorative objects that name no
+## debris type still block tilling but cannot be cleared.
+func debris_at(cell: Vector2i) -> DebrisData:
+	if objects_layer == null:
+		return null
+	var tile := objects_layer.get_cell_tile_data(cell)
+	if tile == null:
+		return null
+	var id: String = tile.get_custom_data(DEBRIS_LAYER)
+	return ItemDB.get_debris(id) if id != "" else null
+
+
+## Lands one tool hit on the debris at `cell`. Returns true if it was removed.
+func hit_debris(cell: Vector2i) -> bool:
+	var debris := debris_at(cell)
+	return debris != null and _farm.hit_debris(cell, debris.hits)
 
 
 func can_till(cell: Vector2i) -> bool:
@@ -114,6 +138,11 @@ func _refresh_cell(cell: Vector2i) -> void:
 		_crop_nodes[cell] = crop_node
 	else:
 		crop_node.set_growth(plot.days_grown)
+
+
+func _remove_debris_tile(cell: Vector2i) -> void:
+	if objects_layer != null:
+		objects_layer.erase_cell(cell)
 
 
 func _remove_crop_node(cell: Vector2i) -> void:

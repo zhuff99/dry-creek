@@ -1,6 +1,7 @@
 class_name FarmData
 extends RefCounted
-## All tilled plots on the ranch and the rules for changing them.
+## All tilled plots on the ranch, which debris has been cleared, and the rules
+## for changing them.
 ##
 ## Holds no nodes. FarmGrid draws it when the farm scene is loaded, but
 ## advance_day() works without a scene, so crops keep growing (or drying out)
@@ -8,8 +9,15 @@ extends RefCounted
 
 ## A plot was added, changed, or needs redrawing.
 signal plot_changed(cell: Vector2i)
+## A rock, tree or patch of brush was removed for good.
+signal debris_cleared(cell: Vector2i)
 
 var plots: Dictionary[Vector2i, FarmPlot] = {}
+## Cells whose debris is gone. The map itself is never edited, so this is what
+## a save needs to remember. Used as a set; the value is always true.
+var cleared_debris: Dictionary[Vector2i, bool] = {}
+## Hits landed so far on debris that takes more than one.
+var debris_damage: Dictionary[Vector2i, int] = {}
 
 
 func get_plot(cell: Vector2i) -> FarmPlot:
@@ -80,6 +88,19 @@ func harvest(cell: Vector2i) -> ItemStack:
 		plot.days_grown = 0
 	plot_changed.emit(cell)
 	return ItemStack.new(crop.harvest_item, amount)
+
+
+## Lands one tool hit on the debris at `cell`, which takes `hits_needed` in
+## total. Returns true if this hit removed it.
+func hit_debris(cell: Vector2i, hits_needed: int) -> bool:
+	var damage: int = debris_damage.get(cell, 0) + 1
+	if damage < hits_needed:
+		debris_damage[cell] = damage
+		return false
+	debris_damage.erase(cell)
+	cleared_debris[cell] = true
+	debris_cleared.emit(cell)
+	return true
 
 
 ## Overnight update: watered crops grow a day, then all soil dries out.

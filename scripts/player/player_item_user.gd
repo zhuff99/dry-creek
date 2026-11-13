@@ -5,7 +5,7 @@ extends Node2D
 ## player. A cursor shows it: bright when the click would do something.
 ## Holding the button keeps working, one use after another.
 
-enum Action { NONE, HARVEST, TILL, WATER, REFILL, PLANT }
+enum Action { NONE, HARVEST, TILL, WATER, REFILL, PLANT, CLEAR }
 
 ## How many tiles away from the player a tile can be targeted.
 const REACH := 1
@@ -81,6 +81,10 @@ func action_at(cell: Vector2i) -> Action:
 					return Action.REFILL if stack.charge < stack.capacity() else Action.NONE
 				if grid.can_water(cell) and _has_charge(stack):
 					return Action.WATER
+			_:
+				# Axe, pickaxe, scythe: each clears its own kind of debris.
+				if _can_clear(grid, cell, stack.item as ToolData):
+					return Action.CLEAR
 	elif stack.item is SeedData:
 		return Action.PLANT if grid.can_plant(cell) else Action.NONE
 	return Action.NONE
@@ -102,6 +106,9 @@ func use_item_at(cell: Vector2i) -> void:
 			await _use_tool(grid, cell, _held_tool().use_animation, _pour_water.bind(grid, cell))
 		Action.REFILL:
 			await _use_tool(grid, cell, ToolData.UseAnimation.DIP, _refill_can)
+		Action.CLEAR:
+			var chips := grid.debris_at(cell).chip_color
+			await _use_tool(grid, cell, _held_tool().use_animation, _hit_debris.bind(grid, cell), chips)
 		Action.PLANT:
 			var seed_item := GameState.selected_stack().item as SeedData
 			if grid.plant(cell, seed_item.crop):
@@ -110,14 +117,21 @@ func use_item_at(cell: Vector2i) -> void:
 
 
 ## Plays a tool animation toward `cell`. `effect` runs when the tool lands.
-func _use_tool(grid: FarmGrid, cell: Vector2i, motion: ToolData.UseAnimation, effect: Callable) -> void:
+## `chips` colours the burst thrown up on impact.
+func _use_tool(
+	grid: FarmGrid,
+	cell: Vector2i,
+	motion: ToolData.UseAnimation,
+	effect: Callable,
+	chips: Color = PlayerToolAnimator.DIRT_COLOR,
+) -> void:
 	var tool_item := _held_tool()
 	# One of eight directions; the tile underfoot uses wherever we already face.
 	var offset := cell - grid.cell_at(_player.global_position)
 	var direction := Vector2(offset).normalized() if offset != Vector2i.ZERO else _player.facing
 	_player.busy = true
 	_player.face(direction)
-	await _animator.play(motion, tool_item.icon, direction, grid.cell_center(cell), effect)
+	await _animator.play(motion, tool_item.icon, direction, grid.cell_center(cell), effect, chips)
 	_player.busy = false
 
 
@@ -136,6 +150,31 @@ func _refill_can() -> void:
 		return
 	GameState.inventory.set_charge(GameState.selected_slot, stack.capacity())
 	EventBus.toast_requested.emit("%s filled." % stack.item.display_name)
+
+
+## One tool hit on the debris at `cell`. The last hit removes it and hands
+## over whatever it drops.
+func _hit_debris(grid: FarmGrid, cell: Vector2i) -> void:
+	var debris := grid.debris_at(cell)
+	if debris == null or not grid.hit_debris(cell):
+		return
+	var amount := randi_range(debris.drop_min, debris.drop_max)
+	if debris.drop_item != null and amount > 0:
+		GameState.inventory.add_item(debris.drop_item, amount)
+		EventBus.toast_requested.emit("+%d %s" % [amount, debris.drop_item.display_name])
+	EventBus.report(&"debris_cleared", _player, grid.cell_center(cell), {"debris": debris.id})
+
+
+func _can_clear(grid: FarmGrid, cell: Vector2i, tool_item: ToolData) -> bool:
+	var debris := grid.debris_at(cell)
+	return debris != null and debris.tool == tool_item.tool_type and _has_room_for(debris)
+
+
+## Checked before the first swing so a full bag never wastes the drop.
+func _has_room_for(debris: DebrisData) -> bool:
+	if debris.drop_item == null or debris.drop_max <= 0:
+		return true
+	return GameState.inventory.can_fit(debris.drop_item, debris.drop_max)
 
 
 func _harvest(grid: FarmGrid, cell: Vector2i, where: Vector2) -> void:
@@ -159,10 +198,19 @@ func _explain_if_useless(cell: Vector2i) -> void:
 	var tool_item := stack.item as ToolData
 	if tool_item == null:
 		return
+	var debris := grid.debris_at(cell)
 	if tool_item.tool_type == ToolData.ToolType.WATERING_CAN and grid.can_water(cell) and not _has_charge(stack):
 		EventBus.toast_requested.emit("The can is empty. Fill it at the river.")
-	elif tool_item.tool_type == ToolData.ToolType.HOE and grid.is_tillable(cell) and grid.is_blocked(cell):
-		EventBus.toast_requested.emit("Something is growing or sitting there.")
+	elif debris != null and debris.tool != tool_item.tool_type:
+		EventBus.toast_requested.emit("%s: use the %s." % [debris.display_name, _tool_name(debris.tool)])
+	elif debris != null and not _has_room_for(debris):
+		EventBus.toast_requested.emit("Your bag is full.")
+
+
+## "pickaxe", "watering can": the enum name in plain words.
+func _tool_name(type: ToolData.ToolType) -> String:
+	var key: String = ToolData.ToolType.keys()[type]
+	return key.to_lower().replace("_", " ")
 
 
 func _held_tool() -> ToolData:

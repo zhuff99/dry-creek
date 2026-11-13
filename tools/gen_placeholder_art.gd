@@ -41,6 +41,12 @@ func _init() -> void:
 	_save(_tile_cursor(), "ui/tile_cursor.png")
 	_save(_hoe(), "items/hoe.png")
 	_save(_watering_can(), "items/watering_can.png")
+	_save(_axe(), "items/axe.png")
+	_save(_pickaxe(), "items/pickaxe.png")
+	_save(_scythe(), "items/scythe.png")
+	_save(_wood(), "items/wood.png")
+	_save(_stone(), "items/stone.png")
+	_save(_fiber(), "items/fiber.png")
 	_save(_seed_packet(CORN), "items/corn_seeds.png")
 	_save(_seed_packet(BEAN), "items/bean_seeds.png")
 	_save(_corn_item(), "items/corn.png")
@@ -273,6 +279,70 @@ func _hoe() -> Image:
 		_rect(img, 3 + i, 13 - i, 2, 1, Color("8a5a33"))  # handle, bottom-left to top-right
 	_rect(img, 9, 1, 6, 2, METAL)  # blade
 	_rect(img, 9, 3, 2, 3, METAL.darkened(0.2))
+	return img
+
+
+## Swung tools share one shape so the swing animation fits them all: the
+## handle runs from the grip at (3, 13) up to the head at the top right.
+func _handle(img: Image) -> void:
+	for i: int in 11:
+		_rect(img, 3 + i, 13 - i, 2, 1, Color("8a5a33"))
+
+
+func _axe() -> Image:
+	var img := _new(T, T)
+	_handle(img)
+	_rect(img, 9, 1, 5, 6, METAL)  # head
+	_rect(img, 8, 2, 1, 4, METAL.lightened(0.3))  # cutting edge
+	_rect(img, 9, 6, 5, 1, METAL.darkened(0.25))
+	return img
+
+
+func _pickaxe() -> Image:
+	var img := _new(T, T)
+	_handle(img)
+	# The head crosses the end of the handle at a right angle.
+	for i: int in 7:
+		_rect(img, 8 + i, i, 2, 2, METAL)
+	_rect(img, 8, 0, 1, 1, METAL.lightened(0.3))
+	_rect(img, 15, 7, 1, 1, METAL.lightened(0.3))
+	return img
+
+
+func _scythe() -> Image:
+	var img := _new(T, T)
+	_handle(img)
+	_rect(img, 5, 1, 9, 2, METAL)  # long blade sweeping back from the tip
+	_rect(img, 3, 2, 3, 2, METAL)
+	_rect(img, 2, 4, 2, 1, METAL.lightened(0.3))
+	_rect(img, 5, 3, 8, 1, METAL.darkened(0.25))
+	return img
+
+
+func _wood() -> Image:
+	var img := _new(T, T)
+	var bark := Color("6d4628")
+	_rect(img, 2, 5, 12, 7, OUTLINE)
+	_rect(img, 3, 6, 10, 5, bark)
+	_rect(img, 3, 6, 10, 1, bark.lightened(0.2))
+	_rect(img, 11, 6, 2, 5, Color("c79a5e"))  # cut end
+	_rect(img, 12, 8, 1, 1, bark)
+	return img
+
+
+func _stone() -> Image:
+	var img := _new(T, T)
+	_rock(img, 0, -1, false)
+	return img
+
+
+func _fiber() -> Image:
+	var img := _new(T, T)
+	var strand := Color("8f9a45")
+	for x: int in [4, 6, 8, 10]:
+		_rect(img, x, 2, 1, 12, strand)
+		_rect(img, x + 1, 3, 1, 10, strand.darkened(0.2))
+	_rect(img, 3, 7, 10, 2, Color("b08a5c"))  # tie
 	return img
 
 

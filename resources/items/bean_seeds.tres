@@ -11,3 +11,4 @@ id = &"bean_seeds"
 display_name = "Bean Seeds"
 description = "Plant on tilled soil. Ready after 3 watered days, then again every 2."
 icon = ExtResource("2_icon")
+buy_price = 8
