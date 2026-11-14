@@ -20,6 +20,8 @@ extends SceneTree
 ##   per direction with the arm thrust out. It is the stance for aiming a gun.
 ## - rattlesnake.png: the pack's green snake in a rattler's sandy browns,
 ##   with a pale tail tip for the rattle.
+## - coyote.png: the pack's white dog (sitting and running) in a coyote's
+##   grey-buff coat, its collar turned into a pale throat.
 ## - log_cabin.png: the pack's buildings are Japanese houses. The homestead
 ##   cabin is drawn from scratch in the pack's colours by cabin_painter.gd.
 ## - cabin_room.png: the inside of that cabin (log walls, board floor, stone
@@ -54,6 +56,14 @@ const RATTLER_SWAPS := {
 	"74a334ff": Color("a3754e"),  # green -> brown
 	"56864cff": Color("eecf9b"),  # dark tail -> pale rattle
 	"ffad5dff": Color("f1c471"),  # belly
+}
+
+const DOG := "res://assets/ninja_adventure/characters/DogWhite.png"
+const COYOTE_SWAPS := {
+	"f2eaf1ff": Color("8f8371"),  # white coat -> grey-buff
+	"9ba7aaff": Color("5e5246"),  # grey tail and ears -> dark
+	"ef914fff": Color("eecf9b"),  # collar -> pale throat
+	"f1c471ff": Color("d2b37d"),
 }
 
 ## Painted furniture to bare wood.
@@ -124,6 +134,10 @@ func _init() -> void:
 	var snake := _cut(SNAKE, Vector2i.ZERO, Vector2i(4, 4))
 	_swap_colours(snake, RATTLER_SWAPS)
 	_save(snake, "rattlesnake.png")
+	var coyote := Image.load_from_file(ProjectSettings.globalize_path(DOG))
+	coyote.convert(Image.FORMAT_RGBA8)
+	_swap_colours(coyote, COYOTE_SWAPS)
+	_save(coyote, "coyote.png")
 	_save(CabinPainter.paint(), "log_cabin.png")
 	_save(RoomPainter.paint(), "cabin_room.png")
 	_save(_furniture(), "cabin_furniture.png")

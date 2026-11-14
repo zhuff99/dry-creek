@@ -3,6 +3,11 @@
 [ext_resource type="Texture2D" path="res://assets/derived/log_cabin.png" id="1_sprite"]
 [ext_resource type="Script" path="res://scripts/world/area_door.gd" id="2_door"]
 [ext_resource type="Script" path="res://scripts/world/night_light.gd" id="20_light"]
+[ext_resource type="Script" path="res://scripts/objects/cabin_damage.gd" id="21_damage"]
+[ext_resource type="Script" path="res://scripts/objects/interactable.gd" id="22_interactable"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mend"]
+size = Vector2(22, 14)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(84, 26)
@@ -47,3 +52,17 @@ color = Color(1, 0.78, 0.45, 1)
 texture_scale = 0.55
 script = ExtResource("20_light")
 strength = 0.7
+
+[node name="Damage" type="Node2D" parent="."]
+script = ExtResource("21_damage")
+
+[node name="Mend" type="Area2D" parent="Damage"]
+position = Vector2(-27, 6)
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+script = ExtResource("22_interactable")
+prompt = "Mend the cabin"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Damage/Mend"]
+shape = SubResource("RectangleShape2D_mend")

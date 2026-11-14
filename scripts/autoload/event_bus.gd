@@ -44,6 +44,11 @@ signal health_changed(health: int, max_health: int)
 @warning_ignore("unused_signal")
 signal player_passed_out(money_lost: int, cause: StringName)
 
+# --- The cabin ---
+## Coyotes tore at the cabin, or the player mended it.
+@warning_ignore("unused_signal")
+signal cabin_damage_changed(damage: int)
+
 # --- Stamina ---
 ## `ceiling` is how far it can refill today; `max_stamina` is a rested day's.
 @warning_ignore("unused_signal")

@@ -28,6 +28,11 @@ const STAMINA_REGEN := 14.0
 ## How much of every point spent is gone until you sleep: the level stamina
 ## refills to drops by this share of the cost.
 const FATIGUE_SHARE := 0.25
+## The most damage the cabin's wall can take.
+const CABIN_MAX_DAMAGE := 8
+## A damaged cabin is draughty: the player wakes this much short of full
+## stamina for every point of damage.
+const DRAUGHT_STAMINA := 5.0
 ## Share of your money that passing out costs (someone has to get you home).
 const PASS_OUT_COST := 0.1
 ## The gun the ranch came with. It is worn, not carried in the bag.
@@ -60,6 +65,12 @@ var shipping_bin: Dictionary[StringName, int] = {}
 ## Wild animals killed today, by the key their spawner gave them. They are
 ## back tomorrow.
 var wildlife_killed: Dictionary[String, bool] = {}
+
+## How torn up the cabin is, 0 to CABIN_MAX_DAMAGE. It stays until mended.
+var cabin_damage: int = 0
+## Coyotes of tonight's pack that have been killed. The rest come back if
+## the player steps out again; tomorrow night the pack is whole.
+var coyotes_killed_tonight: int = 0
 
 ## Seconds of rest still needed before stamina starts refilling.
 var _rest_wait: float = 0.0
@@ -109,6 +120,15 @@ func pass_out(cause: StringName) -> void:
 
 func heal(amount: int) -> void:
 	health += amount
+
+
+func damage_cabin(amount: int) -> void:
+	cabin_damage = clampi(cabin_damage + amount, 0, CABIN_MAX_DAMAGE)
+	EventBus.cabin_damage_changed.emit(cabin_damage)
+
+
+func mend_cabin(amount: int) -> void:
+	damage_cabin(-amount)
 
 
 ## True if there is stamina for something costing `cost`.
@@ -169,7 +189,12 @@ func _on_day_ended(_day: int) -> void:
 	# A night's sleep mends everything, for now.
 	health = max_health
 	rest_fully()
+	if cabin_damage > 0:
+		stamina_ceiling = maxf(max_stamina - cabin_damage * DRAUGHT_STAMINA, 0.0)
+		stamina = stamina_ceiling
+		_report_stamina()
 	wildlife_killed.clear()
+	coyotes_killed_tonight = 0
 	farm.advance_day()
 	var total := shipping_bin_value()
 	shipping_bin.clear()

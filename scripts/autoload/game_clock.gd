@@ -8,6 +8,8 @@ extends Node
 
 ## 6:00 AM, when the player wakes.
 const DAY_START := 6 * 60
+## 8:00 PM: the bed can be used from here on, not before.
+const BEDTIME := 20 * 60
 ## Midnight, as `minutes` counts it. Past this it is late.
 const MIDNIGHT := 24 * 60
 ## 2:00 AM: nobody stays up past this. The player drops where they stand.
@@ -54,6 +56,11 @@ func advance_day() -> void:
 ## The time as the clock shows it: minutes from midnight, in whole steps.
 func shown_minutes() -> int:
 	return int(minutes) / STEP * STEP
+
+
+## True once it is late enough in the day to go to bed.
+func can_sleep() -> bool:
+	return minutes >= BEDTIME
 
 
 func is_late() -> bool:

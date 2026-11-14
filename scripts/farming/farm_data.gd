@@ -90,6 +90,27 @@ func harvest(cell: Vector2i) -> ItemStack:
 	return ItemStack.new(crop.harvest_item, amount)
 
 
+## Cells that have a crop growing in them, at any age.
+func crop_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for cell: Vector2i in plots:
+		if plots[cell].has_crop():
+			cells.append(cell)
+	return cells
+
+
+## An animal eats the crop at `cell`. The soil stays tilled. True if there
+## was a crop to eat.
+func eat_crop(cell: Vector2i) -> bool:
+	var plot := get_plot(cell)
+	if plot == null or not plot.has_crop():
+		return false
+	plot.crop_id = &""
+	plot.days_grown = 0
+	plot_changed.emit(cell)
+	return true
+
+
 ## Lands one tool hit on the debris at `cell`, which takes `hits_needed` in
 ## total. Returns true if this hit removed it.
 func hit_debris(cell: Vector2i, hits_needed: int) -> bool:

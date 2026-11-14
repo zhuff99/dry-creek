@@ -24,7 +24,27 @@ const INK := {
 	"O": Color("141b1b"), "M": Color("8d977f"), "S": Color("5f7160"),
 	"G": Color("a3754e"), "g": Color("91522c"),
 	"B": Color("f1c471"), "b": Color("d78b4a"), "L": Color("8d977f"),
+	"F": Color("8f8371"), "f": Color("5e5246"), "C": Color("eecf9b"),
 }
+# A coyote pelt, stretched: F fur, f darker fur, C the pale belly.
+const PELT_ICON: Array[String] = [
+	"................",
+	"..OO........OO..",
+	".OFFO.OOOO.OFFO.",
+	".OFFFOFFFFOFFFO.",
+	"..OFFFFFFFFFFO..",
+	"...OFFfFFfFFO...",
+	"...OFFFCCFFFO...",
+	"...OFfFCCFfFO...",
+	"...OFFFCCFFFO...",
+	"..OFFFfFFfFFFO..",
+	".OFFFOFFFFOFFFO.",
+	".OFFO.OFFO.OFFO.",
+	"..OO..OFFO..OO..",
+	".......OO.......",
+	"................",
+	"................",
+]
 const REVOLVER_ICON: Array[String] = [
 	"................",
 	"................",
@@ -81,6 +101,7 @@ func _init() -> void:
 	_save(_crop_strip(CORN, false), "crops/corn_growth.png")
 	_save(_crop_strip(BEAN, true), "crops/beans_growth.png")
 	_save(_from_rows(REVOLVER_ICON), "items/revolver.png")
+	_save(_from_rows(PELT_ICON), "items/coyote_pelt.png")
 	_save(_from_rows(ROUNDS_ICON), "items/revolver_rounds.png")
 	_save(_from_rows(REVOLVER_HELD), "weapons/revolver_held.png")
 	print("Placeholder art written to ", OUT)

@@ -36,6 +36,7 @@ const EXPECTED_SOUNDS: Array[StringName] = [
 	&"select", &"ui_open", &"ui_close", &"ui_pick", &"ui_place", &"error", &"door",
 	&"gun_draw", &"gun_holster", &"gunshot", &"gun_empty", &"gun_load", &"bottle_break", &"hurt",
 	&"snake_rattle", &"snake_strike", &"snake_die",
+	&"coyote_howl", &"coyote_yelp", &"coyote_bite", &"coyote_die", &"crop_eaten", &"cabin_hit",
 ]
 ## Where the test stands to shoot: in the field, four tiles north of the
 ## bottles on the practice rail.
@@ -750,6 +751,117 @@ func _run() -> void:
 	# Mend the bite so the health checks below start from full.
 	_state.heal(_state.max_health)
 
+	# --- Coyotes: at night a pack comes onto the farm for the crops and the
+	# cabin. Each part is then tried with coyotes put where they are wanted.
+	var pack: Node = main.get_node("World/Farm/CoyotePack")
+	var paths: Node = main.get_node("World/Farm/Paths")
+	_check(paths.is_open(ROAD_CELLS[2]) and not paths.is_open(RIVER_CELL)
+			and not paths.is_open(grid.cell_at(cabin.global_position + Vector2(0, -12))),
+			"animals know the road is open, and the river and the cabin are not")
+	var way: PackedVector2Array = paths.path(grid.cell_center(ROAD_EXIT + Vector2i(-2, 0)), cabin.global_position + Vector2(0, 10))
+	var way_is_clear := way.size() > 10
+	for point: Vector2 in way:
+		if not paths.is_open(grid.cell_at(point)):
+			way_is_clear = false
+	_check(way_is_clear, "and can find a way from the edge of the map to the cabin door (%d tiles)" % way.size())
+
+	var corn_crop: Resource = item_db.get_crop(&"corn")
+	var bait: Array[Vector2i] = []
+	for y: int in range(20, 24):
+		for x: int in range(22, 28):
+			if bait.size() < 2 and grid.can_till(Vector2i(x, y)):
+				bait.append(Vector2i(x, y))
+	for cell: Vector2i in bait:
+		_state.farm.till(cell)
+		_state.farm.plant(cell, corn_crop)
+	var far_corner: Vector2 = grid.cell_center(Vector2i(40, 27))
+	player.global_position = far_corner
+	await _physics_frames(2)
+	pack._warned = false
+	_clock.minutes = 21 * 60 + 30.0
+	await _frames(3)
+	_check(toast.text.contains("howling") and pack.coyotes.is_empty(), "at half past nine coyotes can be heard, not seen")
+	_clock.minutes = 22 * 60.0
+	await create_timer(pack.ENTRY_SECONDS + 0.5).timeout
+	_check(pack.coyotes.size() == 3 and toast.text.contains("Coyotes on the ranch"),
+			"at ten a pack of three comes onto the ranch (%d)" % pack.coyotes.size())
+	var map_cells: Rect2i = main.get_node("World/Farm/Map/Ground").get_used_rect()
+	var entries_ok := true
+	var crop_jobs: Array[Vector2i] = []
+	for coyote: Node2D in pack.coyotes:
+		var cell: Vector2i = grid.cell_at(coyote.global_position)
+		var inset: int = mini(mini(cell.x, map_cells.end.x - 1 - cell.x), mini(cell.y, map_cells.end.y - 1 - cell.y))
+		var apart: Vector2i = (cell - grid.cell_at(player.global_position)).abs()
+		# They have had half a second to start walking in.
+		if inset > pack.EDGE_TILES + 2 or maxi(apart.x, apart.y) < pack.MIN_TILES_FROM_PLAYER - 2:
+			entries_ok = false
+		if coyote.job == coyote.Job.CROP:
+			crop_jobs.append(coyote.job_cell)
+	_check(entries_ok, "from the edges of the map, well away from the player")
+	_check(pack.coyotes[0].job == pack.coyotes[0].Job.CABIN and crop_jobs.size() == 2 and crop_jobs[0] != crop_jobs[1],
+			"one heads for the cabin and the others each pick a crop of their own")
+	pack.clear()
+	await _frames(2)
+
+	var mauler: Node2D = pack.spawn_at(grid.cell_center(paths.nearest_open(grid.cell_at(cabin.global_position + Vector2(48, 12)))))
+	_check(mauler.job == mauler.Job.CABIN, "(a coyote put by the cabin goes for the wall)")
+	var waited := 0
+	while _state.cabin_damage < 1 and waited < 900:
+		await physics_frame
+		waited += 1
+	var mend: Area2D = cabin.get_node("Damage/Mend")
+	_check(_state.cabin_damage >= 1, "left alone, a coyote tears at the cabin wall")
+	_check(mend.collision_layer == 4 and mend.prompt.contains("wood"), "which can then be mended ('%s')" % mend.prompt)
+
+	var eater: Node2D = pack.spawn_at(grid.cell_center(paths.nearest_open(bait[0] + Vector2i(3, 0))))
+	var eater_cell: Vector2i = eater.job_cell
+	_check(eater.job == eater.Job.CROP and bait.has(eater_cell), "the next one goes for the nearest crop")
+	waited = 0
+	while _state.farm.get_crop(eater_cell) != null and waited < 900:
+		await physics_frame
+		waited += 1
+	_check(_state.farm.get_crop(eater_cell) == null and _state.farm.is_tilled(eater_cell), "and eats it, leaving bare soil")
+
+	var health_before_bite: int = _state.health
+	player.global_position = eater.global_position + Vector2(-40, 0)
+	waited = 0
+	while _state.health == health_before_bite and waited < 600:
+		await physics_frame
+		waited += 1
+	_check(_state.health == health_before_bite - eater.data.damage, "come near one and it goes for you (%d health left)" % _state.health)
+	player.global_position = far_corner
+	waited = 0
+	while (eater.state == eater.State.CHASE or eater.state == eater.State.RECOVER) and waited < 600:
+		await physics_frame
+		waited += 1
+	_check(eater.state == eater.State.TRAVEL or eater.state == eater.State.WORK, "get well clear and it goes back to its business")
+
+	var pelt: Resource = item_db.get_item(&"coyote_pelt")
+	var bullet: RefCounted = load("res://scripts/combat/shot.gd").new(gun, player, eater.global_position, Vector2.RIGHT)
+	eater.get_node("Hurtbox").take_shot(bullet)
+	await _physics_frames(2)
+	_check(eater.health == eater.data.max_health - gun.damage and eater.state == eater.State.CHASE,
+			"a shot that does not kill it brings it straight at you, however far")
+	eater.get_node("Hurtbox").take_shot(bullet)
+	await _frames(2)
+	_check(eater.state == eater.State.DEAD and _state.inventory.count_of(pelt) == 1, "a second shot kills it and leaves a pelt")
+	_check(_state.coyotes_killed_tonight == 1 and not pack.coyotes.has(eater), "and the pack is one short")
+	pack.clear()
+	await _frames(2)
+	_check(pack.release() == 2, "the other two are still out there tonight")
+	pack.clear()
+
+	var wood: Resource = item_db.get_item(&"wood")
+	var damage_now: int = _state.cabin_damage
+	_state.inventory.add_item(wood, damage_now)
+	var wood_before: int = _state.inventory.count_of(wood)
+	cabin.get_node("Damage")._on_mend(player)
+	_check(_state.cabin_damage == 0 and _state.inventory.count_of(wood) == wood_before - damage_now and mend.collision_layer == 0,
+			"mending the cabin takes one wood for each point of damage (%d)" % damage_now)
+	_clock.minutes = 10 * 60.0
+	_state.heal(_state.max_health)
+	await _frames(2)
+
 	# --- Health: a hit takes some, a second hit straight after does not.
 	var health_bar: ProgressBar = main.get_node("UI/HUD/TopBar/Vitals/Bars/Health")
 	_check(_state.health == 10 and _state.max_health == 10 and health_bar.value == 10.0, "the player starts at full health (10)")
@@ -777,12 +889,24 @@ func _run() -> void:
 	var bed: Node2D = world.area.get_node("Entities/Bed")
 	player.global_position = bed.global_position + Vector2(24, -8)
 	await _physics_frames(3)
+	_clock.minutes = 14 * 60.0
+	_press(&"interact")
+	await _frames(3)
+	_release(&"interact")
+	await _frames(2)
+	_check(not paused and _clock.day == day_before and toast.text.contains("too early"), "the bed cannot be used in the daytime")
+	_clock.minutes = 22 * 60 + 30.0
+	await create_timer(4.0).timeout
+	_check(get_nodes_in_group(&"coyotes").is_empty(), "indoors at night, no coyotes come")
+	var crops_at_bedtime: int = _state.farm.crop_cells().size()
 	_press(&"interact")
 	await _frames(3)
 	_release(&"interact")
 	while paused:
 		await process_frame
-	_check(_clock.day == day_before + 1, "sleeping in the bed starts the next day")
+	_check(_clock.day == day_before + 1, "sleeping in the bed at night starts the next day")
+	_check(crops_at_bedtime > 0 and _state.farm.crop_cells().size() == crops_at_bedtime,
+			"and sleeping through the night leaves the crops alone (%d)" % crops_at_bedtime)
 	_check(_state.health == _state.max_health, "a night's sleep restores health")
 	_check(_clock.shown_minutes() == 6 * 60, "and the clock is back at six in the morning")
 	_clock.minutes = 23 * 60.0
@@ -843,6 +967,7 @@ func _run() -> void:
 	# or not.
 	var day_before_late: int = _clock.day
 	var money_before_late: int = _state.money
+	_state.damage_cabin(2)
 	_clock.minutes = 26 * 60 - 0.5
 	for i: int in 120:
 		if paused:
@@ -855,6 +980,10 @@ func _run() -> void:
 	_check(String(main.get_node("UI/DayTransition/Label").text).contains("too late"),
 			"the night screen says you stayed up too late")
 	_check(_clock.day == day_before_late + 1 and _clock.shown_minutes() == 6 * 60, "you wake the next morning at six")
+	_check(is_equal_approx(_state.stamina_ceiling, _state.max_stamina - 2 * _state.DRAUGHT_STAMINA) and toast.text.contains("draughty"),
+			"a torn-up cabin is a bad night's sleep (stamina %.0f of %.0f)" % [_state.stamina_ceiling, _state.max_stamina])
+	_state.mend_cabin(8)
+	_state.rest_fully()
 	_check(world.area.name == "CabinInterior", "at home")
 	_check(_state.money == money_before_late - int(money_before_late * 0.1),
 			"and it cost a tenth of your money ($%d to $%d)" % [money_before_late, _state.money])

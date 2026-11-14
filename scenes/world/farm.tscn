@@ -2,6 +2,9 @@
 
 [ext_resource type="Script" path="res://scripts/world/world_area.gd" id="1_farm"]
 [ext_resource type="Script" path="res://scripts/world/spawn_point.gd" id="9_spawn"]
+[ext_resource type="Script" path="res://scripts/world/path_grid.gd" id="21_paths"]
+[ext_resource type="Script" path="res://scripts/world/coyote_pack.gd" id="22_pack"]
+[ext_resource type="PackedScene" path="res://scenes/creatures/coyote.tscn" id="23_coyote"]
 [ext_resource type="Script" path="res://scripts/world/night_light.gd" id="20_light"]
 [ext_resource type="PackedScene" path="res://scenes/objects/bottle.tscn" id="10_bottle"]
 [ext_resource type="Script" path="res://scripts/world/wildlife_spawner.gd" id="11_wildlife"]
@@ -93,3 +96,15 @@ color = Color(1, 0.8, 0.5, 1)
 texture_scale = 1.4
 script = ExtResource("20_light")
 strength = 0.75
+
+[node name="Paths" type="Node" parent="." node_paths=PackedStringArray("farm_grid")]
+script = ExtResource("21_paths")
+farm_grid = NodePath("../FarmGrid")
+
+[node name="CoyotePack" type="Node" parent="." node_paths=PackedStringArray("farm_grid", "paths", "entities", "cabin")]
+script = ExtResource("22_pack")
+coyote_scene = ExtResource("23_coyote")
+farm_grid = NodePath("../FarmGrid")
+paths = NodePath("../Paths")
+entities = NodePath("../Entities")
+cabin = NodePath("../Entities/Cabin")

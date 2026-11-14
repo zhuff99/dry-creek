@@ -32,6 +32,12 @@ extends Resource
 ## Seconds it lies still after striking, before it can strike again.
 @export_range(0.0, 5.0, 0.05) var recover_seconds: float = 1.2
 
+@export_group("Raiding")
+## Pixels per second when it is after the player. 0 means it never runs.
+@export_range(0.0, 200.0, 1.0) var chase_speed: float = 0.0
+## Seconds it takes to eat one crop, or to land one blow on a wall.
+@export_range(0.1, 20.0, 0.1) var work_seconds: float = 2.5
+
 @export_group("Drops")
 ## What it leaves when killed. May be empty.
 @export var drop_item: ItemData

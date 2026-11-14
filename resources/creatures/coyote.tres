@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CreatureData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/creature_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/derived/coyote.png" id="2_sheet"]
+[ext_resource type="Resource" path="res://resources/items/coyote_pelt.tres" id="3_drop"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"coyote"
+display_name = "Coyote"
+sprite_sheet = ExtResource("2_sheet")
+max_health = 4
+move_speed = 46.0
+notice_radius = 52.0
+strike_radius = 13.0
+calm_radius = 110.0
+damage = 2
+recover_seconds = 0.9
+chase_speed = 74.0
+work_seconds = 2.5
+drop_item = ExtResource("3_drop")
+drop_min = 1
+drop_max = 1
+warn_sound = &"coyote_yelp"
+attack_sound = &"coyote_bite"
+death_sound = &"coyote_die"

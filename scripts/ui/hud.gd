@@ -49,6 +49,8 @@ func _ready() -> void:
 
 func _on_day_started(day: int) -> void:
 	_set_text(_day_label, "Day %d" % day)
+	if GameState.cabin_damage > 0:
+		_show_toast("The cabin is torn up and draughty. You slept badly.")
 	_on_time_changed(GameClock.shown_minutes())
 
 
