@@ -90,6 +90,11 @@ top_level = true
 z_index = 1
 texture = ExtResource("4_cursor")
 
+[node name="BuildGhost" type="Sprite2D" parent="ItemUser"]
+visible = false
+top_level = true
+z_index = 1
+
 [node name="Interactor" type="Area2D" parent="."]
 position = Vector2(0, -6)
 collision_layer = 0

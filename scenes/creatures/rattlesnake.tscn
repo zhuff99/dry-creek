@@ -14,7 +14,7 @@ size = Vector2(12, 12)
 
 [node name="Rattlesnake" type="CharacterBody2D"]
 collision_layer = 32
-collision_mask = 17
+collision_mask = 81
 motion_mode = 1
 script = ExtResource("1_snake")
 data = ExtResource("2_data")

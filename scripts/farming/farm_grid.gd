@@ -22,6 +22,13 @@ const DEBRIS_LAYER := "debris"
 
 var _farm: FarmData
 var _crop_nodes: Dictionary[Vector2i, Crop] = {}
+var _built_nodes: Dictionary[Vector2i, BuiltPiece] = {}
+
+## The four sides a built piece can join, and the bit BuiltPiece uses for each.
+const SIDES := {
+	Vector2i.UP: BuiltPiece.NORTH, Vector2i.RIGHT: BuiltPiece.EAST,
+	Vector2i.DOWN: BuiltPiece.SOUTH, Vector2i.LEFT: BuiltPiece.WEST,
+}
 
 
 func _ready() -> void:
@@ -35,6 +42,9 @@ func _ready() -> void:
 	# Redraw whatever already exists (returning to the farm, or a loaded save).
 	for cell: Vector2i in _farm.plots:
 		_refresh_cell(cell)
+	_farm.built_changed.connect(_refresh_built)
+	for cell: Vector2i in _farm.built:
+		_show_built(cell)
 
 
 func cell_at(world_position: Vector2) -> Vector2i:
@@ -80,7 +90,17 @@ func hit_debris(cell: Vector2i) -> bool:
 
 
 func can_till(cell: Vector2i) -> bool:
-	return is_tillable(cell) and not is_blocked(cell) and not _farm.is_tilled(cell)
+	return can_build(cell)
+
+
+## Bare, open ground with nothing on it: not soil, not road, not built on.
+func can_build(cell: Vector2i) -> bool:
+	return is_tillable(cell) and not is_blocked(cell) and not _farm.is_tilled(cell) and not _farm.is_built(cell)
+
+
+## The node standing for what is built at `cell`, or null.
+func built_node(cell: Vector2i) -> BuiltPiece:
+	return _built_nodes.get(cell)
 
 
 func till(cell: Vector2i) -> bool:
@@ -155,6 +175,37 @@ func _draw_soil(cell: Vector2i) -> void:
 		wet_layer.set_cell(cell, FarmTiles.SRC_WET_SOIL, piece)
 	else:
 		wet_layer.erase_cell(cell)
+
+
+## A built tile changed: redraw it and the pieces beside it, whose joins
+## depend on it.
+func _refresh_built(cell: Vector2i) -> void:
+	_show_built(cell)
+	for side: Vector2i in SIDES:
+		_show_built(cell + side)
+
+
+func _show_built(cell: Vector2i) -> void:
+	var piece := _farm.get_built(cell)
+	var node: BuiltPiece = _built_nodes.get(cell)
+	if piece == null:
+		if node != null:
+			node.queue_free()
+			_built_nodes.erase(cell)
+		return
+	if node == null:
+		node = piece.scene.instantiate() as BuiltPiece
+		crop_parent.add_child(node)
+		var tile_height := ground_layer.tile_set.tile_size.y
+		node.global_position = cell_center(cell) + Vector2(0, tile_height / 2.0)
+		_built_nodes[cell] = node
+	var joined := 0
+	if piece.connects:
+		for side: Vector2i in SIDES:
+			var other := _farm.get_built(cell + side)
+			if other != null and other.connects:
+				joined |= SIDES[side]
+	node.refresh(joined, _farm.built_damage.get(cell, 0))
 
 
 func _remove_debris_tile(cell: Vector2i) -> void:

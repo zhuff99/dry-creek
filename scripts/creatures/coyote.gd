@@ -9,7 +9,7 @@ extends CharacterBody2D
 signal died
 
 enum State { TRAVEL, WORK, CHASE, RECOVER, DEAD }
-enum Job { NONE, CROP, CABIN, HUNT }
+enum Job { NONE, CROP, CABIN, HUNT, FENCE }
 
 ## Seconds between looking for a new way to a moving target.
 const REPATH_SECONDS := 0.4
@@ -27,7 +27,7 @@ const FADE_SECONDS := 0.6
 var state: State = State.TRAVEL
 var job: Job = Job.NONE
 var health: int = 0
-## The crop tile it is after, when the job is a crop.
+## The crop tile it is after, or the built tile it is breaking down.
 var job_cell := Vector2i(-1, -1)
 
 var _pack: CoyotePack
@@ -125,6 +125,10 @@ func _take_job() -> void:
 			_goal = _pack.farm_grid.cell_center(job_cell)
 		Job.CABIN:
 			_goal = _pack.cabin_spot()
+		Job.FENCE:
+			var way_in := _pack.fence_for(self)
+			job_cell = way_in.piece
+			_goal = way_in.stand
 		_:
 			_goal = global_position
 	_route_to(_goal)
@@ -132,6 +136,11 @@ func _take_job() -> void:
 
 
 func _arrive() -> void:
+	# No way there after all (something was built or blocked on the way).
+	if job != Job.HUNT and global_position.distance_to(_goal) > 3.0 * JOB_REACH:
+		job = Job.HUNT
+		_enter(State.CHASE)
+		return
 	match job:
 		Job.CROP:
 			# Someone may have picked it, or another coyote got there first.
@@ -141,6 +150,13 @@ func _arrive() -> void:
 			_enter(State.WORK)
 		Job.CABIN:
 			_face(Vector2.UP)
+			_enter(State.WORK)
+		Job.FENCE:
+			# Taken down, or already broken through by another.
+			if not GameState.farm.is_built(job_cell):
+				_take_job()
+				return
+			_face(_pack.farm_grid.cell_center(job_cell) - global_position)
 			_enter(State.WORK)
 		_:
 			_take_job()
@@ -161,6 +177,11 @@ func _finish_work() -> void:
 				_take_job()
 			else:
 				_enter(State.WORK)
+		Job.FENCE:
+			Audio.play(&"cabin_hit")
+			GameState.farm.damage_built(job_cell, 1)
+			# Look again: it may be through now, or need another blow.
+			_take_job()
 		_:
 			_take_job()
 

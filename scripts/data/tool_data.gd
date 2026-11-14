@@ -3,7 +3,7 @@ extends ItemData
 ## A tool the player uses on a tile.
 
 ## New types go on the end: saved resources store these as numbers.
-enum ToolType { HOE, WATERING_CAN, AXE, PICKAXE, SCYTHE }
+enum ToolType { HOE, WATERING_CAN, AXE, PICKAXE, SCYTHE, HAMMER, SAW }
 ## Which motion the player makes. DIP is the watering can filling up.
 enum UseAnimation { SWING, POUR, DIP }
 

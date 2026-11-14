@@ -1,5 +1,6 @@
 extends Node
-## Index of every item, crop and debris resource by id (autoload "ItemDB").
+## Index of every item, crop, debris and buildable resource by id (autoload
+## "ItemDB").
 ##
 ## Anything that needs to persist (inventory, farm plots) stores ids and looks
 ## the resource up here, so save files never contain object references.
@@ -7,10 +8,14 @@ extends Node
 const ITEM_DIR := "res://resources/items"
 const CROP_DIR := "res://resources/crops"
 const DEBRIS_DIR := "res://resources/debris"
+const BUILDABLE_DIR := "res://resources/buildables"
 
 var _items: Dictionary[StringName, ItemData] = {}
 var _crops: Dictionary[StringName, CropData] = {}
 var _debris: Dictionary[StringName, DebrisData] = {}
+var _buildables: Dictionary[StringName, BuildableData] = {}
+## The same buildables in the order the saw offers them.
+var _build_list: Array[BuildableData] = []
 
 
 func _ready() -> void:
@@ -26,6 +31,12 @@ func _ready() -> void:
 		var debris := res as DebrisData
 		if debris != null:
 			_debris[debris.id] = debris
+	for res: Resource in ResourceFolder.load_all(BUILDABLE_DIR):
+		var buildable := res as BuildableData
+		if buildable != null:
+			_buildables[buildable.id] = buildable
+			_build_list.append(buildable)
+	_build_list.sort_custom(func(a: BuildableData, b: BuildableData) -> bool: return a.sort_order < b.sort_order)
 
 
 func get_item(id: StringName) -> ItemData:
@@ -47,3 +58,15 @@ func get_debris(id: StringName) -> DebrisData:
 	if debris == null:
 		push_error("ItemDB: unknown debris id '%s'" % id)
 	return debris
+
+
+func get_buildable(id: StringName) -> BuildableData:
+	var buildable: BuildableData = _buildables.get(id)
+	if buildable == null:
+		push_error("ItemDB: unknown buildable id '%s'" % id)
+	return buildable
+
+
+## Everything the saw can build, in the order it offers them.
+func buildables() -> Array[BuildableData]:
+	return _build_list

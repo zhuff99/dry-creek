@@ -59,8 +59,16 @@ func release() -> int:
 	if spots.is_empty():
 		return 0
 	spots.shuffle()
-	for index: int in mini(wanted, spots.size()):
-		spawn_at(farm_grid.cell_center(spots[index]))
+	var door := cabin.global_position + Vector2(0, 10) if cabin != null else Vector2.ZERO
+	for cell: Vector2i in spots:
+		if coyotes.size() >= wanted:
+			break
+		var where := farm_grid.cell_center(cell)
+		# Not from a pocket with no way out, like the far bank of the river.
+		if cabin == null or paths.can_reach(where, door):
+			spawn_at(where)
+	if coyotes.is_empty():
+		return 0
 	Audio.play(&"coyote_howl")
 	EventBus.toast_requested.emit("Coyotes on the ranch!")
 	return coyotes.size()
@@ -84,37 +92,52 @@ func clear() -> void:
 
 
 ## What `coyote` should do now. The first of the pack goes for the cabin,
-## the rest for the crops; whoever has nothing left to spoil hunts the player.
+## the rest for the crops. Crops fenced off are got at by breaking the fence.
+## Whoever has nothing left to spoil hunts the player.
 func job_for(coyote: Coyote) -> Coyote.Job:
 	var wall_stands := GameState.cabin_damage < GameState.CABIN_MAX_DAMAGE and cabin != null
-	var crop := crop_for(coyote)
 	var leader := not coyotes.is_empty() and coyotes[0] == coyote
 	if leader and wall_stands:
 		return Coyote.Job.CABIN
-	if crop != Vector2i(-1, -1):
+	if crop_for(coyote) != PathGrid.NOWHERE:
 		return Coyote.Job.CROP
+	if not fence_for(coyote).is_empty():
+		return Coyote.Job.FENCE
 	if wall_stands:
 		return Coyote.Job.CABIN
 	return Coyote.Job.HUNT
 
 
-## The nearest crop no other coyote is already after, or (-1, -1).
+## The nearest crop `coyote` can walk to that no other coyote is already
+## after, or PathGrid.NOWHERE.
 func crop_for(coyote: Coyote) -> Vector2i:
 	var taken: Array[Vector2i] = []
 	for other: Coyote in coyotes:
 		if other != coyote and is_instance_valid(other) and other.job == Coyote.Job.CROP:
 			taken.append(other.job_cell)
+	for cell: Vector2i in _crops_by_distance(coyote):
+		if not taken.has(cell) and paths.can_reach(coyote.global_position, farm_grid.cell_center(cell)):
+			return cell
+	return PathGrid.NOWHERE
+
+
+## Where `coyote` should break through to get at the nearest fenced-off crop:
+## {"piece": the built tile, "stand": where to stand}. Empty if no crop is
+## behind anything the player built.
+func fence_for(coyote: Coyote) -> Dictionary:
+	for cell: Vector2i in _crops_by_distance(coyote):
+		var way_in := paths.breach(coyote.global_position, farm_grid.cell_center(cell))
+		if not way_in.is_empty():
+			return way_in
+	return {}
+
+
+func _crops_by_distance(coyote: Coyote) -> Array[Vector2i]:
 	var here := farm_grid.cell_at(coyote.global_position)
-	var best := Vector2i(-1, -1)
-	var best_distance := INF
-	for cell: Vector2i in GameState.farm.crop_cells():
-		if taken.has(cell):
-			continue
-		var distance := Vector2(cell - here).length()
-		if distance < best_distance:
-			best = cell
-			best_distance = distance
-	return best
+	var cells := GameState.farm.crop_cells()
+	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return (a - here).length_squared() < (b - here).length_squared())
+	return cells
 
 
 ## A place to stand in front of the cabin's wall.

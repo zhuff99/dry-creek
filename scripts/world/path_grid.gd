@@ -1,24 +1,33 @@
 class_name PathGrid
 extends Node
-## Finds ways across the farm for animals: around trees, rocks, water, rails
-## and buildings. It reads the map as the physics sees it, one tile at a time,
-## so anything solid is avoided without being listed here.
+## Finds ways across the farm for animals: around trees, rocks, water, rails,
+## buildings and whatever the player has built. It reads the map as the
+## physics sees it, one tile at a time, so anything solid is avoided without
+## being listed here.
 ##
-## The map is read on first use and again after the player clears something.
+## It also knows the way an animal would take if the player's fences were not
+## there, which is how a coyote picks the piece of fence to break through.
+##
+## The map is read on first use and again after the player clears or builds
+## something.
 
-## What stops an animal: the "world" and "low" physics layers.
-const SOLID_MASK := 17
+## What stops an animal: the "world", "low" and "gate" physics layers.
+const SOLID_MASK := 1 | 16 | 64
 ## The probe is a little smaller than a tile so neighbours do not count.
 const PROBE := Vector2(10, 10)
+const NOWHERE := Vector2i(-1, -1)
 
 @export var farm_grid: FarmGrid
 
 var _astar: AStarGrid2D
+## The same map with everything the player built taken away.
+var _unfenced: AStarGrid2D
 var _stale: bool = true
 
 
 func _ready() -> void:
 	GameState.farm.debris_cleared.connect(func(_cell: Vector2i) -> void: _stale = true)
+	GameState.farm.built_changed.connect(func(_cell: Vector2i) -> void: _stale = true)
 
 
 ## Points to walk through from one place to another, or nothing if there is
@@ -29,11 +38,33 @@ func path(from: Vector2, to: Vector2) -> PackedVector2Array:
 	var start := nearest_open(farm_grid.cell_at(from))
 	var goal := nearest_open(farm_grid.cell_at(to))
 	var points := PackedVector2Array()
-	if start == Vector2i(-1, -1) or goal == Vector2i(-1, -1):
+	if start == NOWHERE or goal == NOWHERE:
 		return points
 	for cell: Vector2i in _astar.get_id_path(start, goal):
 		points.append(farm_grid.cell_center(cell))
 	return points
+
+
+func can_reach(from: Vector2, to: Vector2) -> bool:
+	return not path(from, to).is_empty()
+
+
+## Where to break through to get from `from` to the tile at `to` when the
+## player's building is in the way: {"piece": the built tile to attack,
+## "stand": where to stand to do it}. Empty if nothing built is in the way,
+## or there is no way even without it.
+func breach(from: Vector2, to: Vector2) -> Dictionary:
+	_refresh()
+	var start := nearest_open(farm_grid.cell_at(from))
+	var goal := farm_grid.cell_at(to)
+	if start == NOWHERE or not _unfenced.is_in_boundsv(goal) or _unfenced.is_point_solid(goal):
+		return {}
+	var previous := start
+	for cell: Vector2i in _unfenced.get_id_path(start, goal):
+		if _astar.is_point_solid(cell):
+			return {"piece": cell, "stand": farm_grid.cell_center(previous)}
+		previous = cell
+	return {}
 
 
 func is_open(cell: Vector2i) -> bool:
@@ -54,11 +85,11 @@ func open_cells() -> Array[Vector2i]:
 
 
 ## `cell` if it is open, else the closest open tile within a few steps, else
-## (-1, -1).
+## NOWHERE.
 func nearest_open(cell: Vector2i) -> Vector2i:
 	_refresh()
 	for reach: int in 5:
-		var best := Vector2i(-1, -1)
+		var best := NOWHERE
 		var best_distance := INF
 		for y: int in range(-reach, reach + 1):
 			for x: int in range(-reach, reach + 1):
@@ -68,21 +99,17 @@ func nearest_open(cell: Vector2i) -> Vector2i:
 				if is_open(candidate) and Vector2(x, y).length() < best_distance:
 					best = candidate
 					best_distance = Vector2(x, y).length()
-		if best != Vector2i(-1, -1):
+		if best != NOWHERE:
 			return best
-	return Vector2i(-1, -1)
+	return NOWHERE
 
 
 func _refresh() -> void:
 	if not _stale and _astar != null:
 		return
 	_stale = false
-	_astar = AStarGrid2D.new()
-	_astar.region = farm_grid.ground_layer.get_used_rect()
-	_astar.cell_size = Vector2(farm_grid.ground_layer.tile_set.tile_size)
-	# No cutting a corner between two solid tiles.
-	_astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
-	_astar.update()
+	_astar = _new_grid()
+	_unfenced = _new_grid()
 	var space := farm_grid.get_world_2d().direct_space_state
 	var probe := RectangleShape2D.new()
 	probe.size = PROBE
@@ -94,5 +121,18 @@ func _refresh() -> void:
 		for x: int in range(region.position.x, region.end.x):
 			var cell := Vector2i(x, y)
 			query.transform = Transform2D(0.0, farm_grid.cell_center(cell))
-			if not space.intersect_shape(query, 1).is_empty():
-				_astar.set_point_solid(cell, true)
+			var built := GameState.farm.is_built(cell)
+			# A piece put up this very moment may not be in the physics yet.
+			var solid := built or not space.intersect_shape(query, 1).is_empty()
+			_astar.set_point_solid(cell, solid)
+			_unfenced.set_point_solid(cell, solid and not built)
+
+
+func _new_grid() -> AStarGrid2D:
+	var grid := AStarGrid2D.new()
+	grid.region = farm_grid.ground_layer.get_used_rect()
+	grid.cell_size = Vector2(farm_grid.ground_layer.tile_set.tile_size)
+	# No cutting a corner between two solid tiles.
+	grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+	grid.update()
+	return grid

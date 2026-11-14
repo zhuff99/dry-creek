@@ -5,12 +5,15 @@ extends Node2D
 ## player. A cursor shows it: bright when the click would do something.
 ## Holding the button keeps working, one use after another.
 
-enum Action { NONE, HARVEST, TILL, WATER, REFILL, PLANT, CLEAR }
+enum Action { NONE, HARVEST, TILL, WATER, REFILL, PLANT, CLEAR, REPAIR, BUILD }
 
 ## How many tiles away from the player a tile can be targeted.
 const REACH := 1
 const CURSOR_VALID := Color(1, 1, 1, 0.9)
 const CURSOR_INVALID := Color(1, 0.35, 0.3, 0.45)
+## What mending is done with: one of these for each point of damage.
+const REPAIR_ITEM := &"wood"
+const GHOST_TINT := Color(1, 1, 1, 0.55)
 
 var target_cell: Vector2i
 
@@ -21,11 +24,15 @@ var _primary_held: bool = false
 @onready var _player: Player = owner
 @onready var _animator: PlayerToolAnimator = owner.get_node("ToolAnimator")
 @onready var _cursor: Sprite2D = $TileCursor
+## A see-through picture of what the saw is about to build.
+@onready var _ghost: Sprite2D = $BuildGhost
 
 
 func _ready() -> void:
 	# Hidden until the first frame places it; a new area arrives paused.
 	_cursor.hide()
+	_ghost.hide()
+	_ghost.modulate = GHOST_TINT
 
 
 func _process(_delta: float) -> void:
@@ -33,6 +40,7 @@ func _process(_delta: float) -> void:
 	# No tile work indoors, or with a gun in hand.
 	if grid == null or _player.armed:
 		_cursor.hide()
+		_ghost.hide()
 		_primary_held = false
 		return
 	var player_cell := grid.cell_at(_player.global_position)
@@ -43,6 +51,7 @@ func _process(_delta: float) -> void:
 	_cursor.modulate = CURSOR_VALID if usable else CURSOR_INVALID
 	# No cursor at all while holding something that never acts on tiles.
 	_cursor.visible = usable or _holding_farm_item()
+	_show_ghost(grid)
 
 	if _primary_held:
 		if not Input.is_action_pressed(&"primary_action"):
@@ -60,6 +69,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_explain_if_useless(target_cell)
 		_explain_if_tired(target_cell)
 		use_item_at(target_cell)
+	elif event.is_action_pressed(&"aim") and _holding_tool(ToolData.ToolType.SAW) and not _player.armed:
+		dismantle_at(target_cell)
+	elif event.is_action_pressed(&"cycle_blueprint") and _holding_tool(ToolData.ToolType.SAW):
+		GameState.cycle_blueprint()
 	elif event.is_action_pressed(&"hotbar_next"):
 		GameState.select_slot(GameState.selected_slot + 1)
 	elif event.is_action_pressed(&"hotbar_prev"):
@@ -91,6 +104,10 @@ func action_at(cell: Vector2i) -> Action:
 					return Action.REFILL if stack.charge < stack.capacity() else Action.NONE
 				if grid.can_water(cell) and _has_charge(stack):
 					return Action.WATER
+			ToolData.ToolType.HAMMER:
+				return Action.REPAIR if _can_repair(grid, cell) else Action.NONE
+			ToolData.ToolType.SAW:
+				return Action.BUILD if _can_build(grid, cell) else Action.NONE
 			_:
 				# Axe, pickaxe, scythe: each clears its own kind of debris.
 				if _can_clear(grid, cell, stack.item as ToolData):
@@ -127,6 +144,10 @@ func use_item_at(cell: Vector2i) -> void:
 			var chips := grid.debris_at(cell).chip_color
 			var swish := _held_tool().start_sound
 			await _use_tool(grid, cell, _held_tool().use_animation, _hit_debris.bind(grid, cell), swish, chips)
+		Action.REPAIR:
+			await _use_tool(grid, cell, _held_tool().use_animation, _repair.bind(grid, cell))
+		Action.BUILD:
+			await _use_tool(grid, cell, _held_tool().use_animation, _build.bind(grid, cell))
 		Action.PLANT:
 			var seed_item := GameState.selected_stack().item as SeedData
 			if grid.plant(cell, seed_item.crop):
@@ -139,7 +160,7 @@ func use_item_at(cell: Vector2i) -> void:
 ## is work; planting, picking and filling the can are not.
 func stamina_cost_of(action: Action) -> float:
 	match action:
-		Action.TILL, Action.WATER, Action.CLEAR:
+		Action.TILL, Action.WATER, Action.CLEAR, Action.REPAIR, Action.BUILD:
 			return _held_tool().stamina_cost
 	return 0.0
 
@@ -206,6 +227,91 @@ func _hit_debris(grid: FarmGrid, cell: Vector2i) -> void:
 	EventBus.report(&"debris_cleared", _player, grid.cell_center(cell), {"debris": debris.id})
 
 
+## Takes down what is built at `cell` and hands back its wood, less a piece
+## for each blow it had taken. True if there was something to take down.
+func dismantle_at(cell: Vector2i) -> bool:
+	var grid := _get_farm_grid()
+	if grid == null or _player.busy:
+		return false
+	var damage: int = GameState.farm.built_damage.get(cell, 0)
+	var piece := GameState.farm.unbuild(cell)
+	if piece == null:
+		return false
+	Audio.play(&"chop")
+	var back := maxi(piece.material_count - damage, 0)
+	if back > 0:
+		GameState.inventory.add_item(piece.material, back)
+		EventBus.toast_requested.emit("+%d %s" % [back, piece.material.display_name])
+	return true
+
+
+## One swing of the hammer at `cell`: a point of damage mended for a piece
+## of wood.
+func _repair(grid: FarmGrid, cell: Vector2i) -> void:
+	if not _can_repair(grid, cell):
+		return
+	GameState.inventory.remove_item(ItemDB.get_item(REPAIR_ITEM), 1)
+	if GameState.farm.built_damage.get(cell, 0) > 0:
+		GameState.farm.repair_built(cell, 1)
+	else:
+		_repairable_at(grid, cell).repair(1)
+	Audio.play(&"chop")
+	if _damage_at(grid, cell) <= 0:
+		EventBus.toast_requested.emit("Mended.")
+
+
+func _build(grid: FarmGrid, cell: Vector2i) -> void:
+	if not _can_build(grid, cell):
+		return
+	var piece := GameState.blueprint()
+	GameState.inventory.remove_item(piece.material, piece.material_count)
+	GameState.farm.build(cell, piece)
+	Audio.play(&"chop")
+	EventBus.report(&"piece_built", _player, grid.cell_center(cell), {"piece": piece.id})
+
+
+func _can_repair(grid: FarmGrid, cell: Vector2i) -> bool:
+	return _damage_at(grid, cell) > 0 and GameState.inventory.count_of(ItemDB.get_item(REPAIR_ITEM)) > 0
+
+
+## Points of damage on whatever is at `cell`: something built there, or a
+## building that covers the tile.
+func _damage_at(grid: FarmGrid, cell: Vector2i) -> int:
+	var damage: int = GameState.farm.built_damage.get(cell, 0)
+	if damage > 0:
+		return damage
+	var thing := _repairable_at(grid, cell)
+	return thing.repair_needed() if thing != null else 0
+
+
+## The building at `cell` that can be mended (a node in the "repairable"
+## group, like the cabin), or null.
+func _repairable_at(grid: FarmGrid, cell: Vector2i) -> Node:
+	for thing: Node in get_tree().get_nodes_in_group(&"repairable"):
+		if thing.covers_cell(grid, cell):
+			return thing
+	return null
+
+
+## True if the saw's current piece can go up at `cell`: bare ground, not
+## underfoot, and the wood to make it.
+func _can_build(grid: FarmGrid, cell: Vector2i) -> bool:
+	var piece := GameState.blueprint()
+	return piece != null and grid.can_build(cell) and cell != grid.cell_at(_player.global_position) \
+			and GameState.inventory.count_of(piece.material) >= piece.material_count
+
+
+func _show_ghost(grid: FarmGrid) -> void:
+	var piece := GameState.blueprint()
+	_ghost.visible = piece != null and not _player.busy and action_at(target_cell) == Action.BUILD
+	if not _ghost.visible:
+		return
+	_ghost.texture = piece.icon
+	# Standing on the bottom edge of the tile, as the real piece will.
+	_ghost.offset = Vector2(0, -piece.icon.get_height() / 2.0)
+	_ghost.global_position = grid.cell_center(target_cell) + Vector2(0, grid.ground_layer.tile_set.tile_size.y / 2.0)
+
+
 func _can_clear(grid: FarmGrid, cell: Vector2i, tool_item: ToolData) -> bool:
 	var debris := grid.debris_at(cell)
 	return debris != null and debris.tool == tool_item.tool_type and _has_room_for(debris)
@@ -243,7 +349,13 @@ func _explain_if_useless(cell: Vector2i) -> void:
 		return
 	var debris := grid.debris_at(cell)
 	var reason := ""
-	if tool_item.tool_type == ToolData.ToolType.WATERING_CAN and grid.can_water(cell) and not _has_charge(stack):
+	var piece := GameState.blueprint()
+	if tool_item.tool_type == ToolData.ToolType.HAMMER and _damage_at(grid, cell) > 0:
+		reason = "You need wood to mend that."
+	elif tool_item.tool_type == ToolData.ToolType.SAW and piece != null and grid.can_build(cell) \
+			and GameState.inventory.count_of(piece.material) < piece.material_count:
+		reason = "A %s takes %d %s." % [piece.display_name.to_lower(), piece.material_count, piece.material.display_name.to_lower()]
+	elif tool_item.tool_type == ToolData.ToolType.WATERING_CAN and grid.can_water(cell) and not _has_charge(stack):
 		reason = "The can is empty. Fill it at the river."
 	elif debris != null and debris.tool != tool_item.tool_type:
 		reason = "%s: use the %s." % [debris.display_name, _tool_name(debris.tool)]
@@ -273,6 +385,11 @@ func _explain_if_tired(cell: Vector2i) -> void:
 func _tool_name(type: ToolData.ToolType) -> String:
 	var key: String = ToolData.ToolType.keys()[type]
 	return key.to_lower().replace("_", " ")
+
+
+func _holding_tool(type: ToolData.ToolType) -> bool:
+	var stack := GameState.selected_stack()
+	return stack != null and stack.item is ToolData and (stack.item as ToolData).tool_type == type
 
 
 func _held_tool() -> ToolData:

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BuildableData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/buildable_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/built/gate_icon.png" id="2_icon"]
+[ext_resource type="PackedScene" path="res://scenes/objects/gate.tscn" id="3_scene"]
+[ext_resource type="Resource" path="res://resources/items/wood.tres" id="4_wood"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"gate"
+display_name = "Gate"
+description = "You walk straight through it. Animals cannot."
+icon = ExtResource("2_icon")
+scene = ExtResource("3_scene")
+material = ExtResource("4_wood")
+material_count = 3
+connects = true
+sort_order = 1

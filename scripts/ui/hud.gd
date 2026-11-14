@@ -34,6 +34,7 @@ func _ready() -> void:
 	EventBus.hotbar_slot_selected.connect(_on_slot_selected)
 	GameState.inventory.changed.connect(_refresh_item_label)
 	EventBus.weapon_drawn_changed.connect(_on_weapon_drawn_changed)
+	EventBus.blueprint_changed.connect(_refresh_item_label)
 	EventBus.rounds_changed.connect(func(_loaded: int) -> void: _refresh_item_label())
 	EventBus.health_changed.connect(_on_health_changed)
 	_on_health_changed(GameState.health, GameState.max_health)
@@ -50,7 +51,7 @@ func _ready() -> void:
 func _on_day_started(day: int) -> void:
 	_set_text(_day_label, "Day %d" % day)
 	if GameState.cabin_damage > 0:
-		_show_toast("The cabin is torn up and draughty. You slept badly.")
+		_show_toast("The cabin is torn up and draughty. Mend it with the hammer.")
 	_on_time_changed(GameClock.shown_minutes())
 
 
@@ -106,6 +107,10 @@ func _refresh_item_label() -> void:
 	var stack := GameState.selected_stack()
 	if stack == null:
 		_set_text(_item_label, "")
+	elif stack.item is ToolData and (stack.item as ToolData).tool_type == ToolData.ToolType.SAW and GameState.blueprint() != null:
+		var piece := GameState.blueprint()
+		_set_text(_item_label, "Build: %s  (%d %s)   [F] next" % [
+			piece.display_name, piece.material_count, piece.material.display_name.to_lower()])
 	elif stack.capacity() > 0:
 		_set_text(_item_label, "%s  %d/%d" % [stack.item.display_name, stack.charge, stack.capacity()])
 	else:

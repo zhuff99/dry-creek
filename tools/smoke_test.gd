@@ -316,6 +316,7 @@ func _run() -> void:
 	# --- Ship through the real interact input.
 	player.global_position = crate.global_position + Vector2(0, 16)
 	await _physics_frames(5)
+	corn_slot = _to_hotbar(root.get_node("ItemDB").get_item(&"corn"))
 	_state.select_slot(corn_slot)
 	var corn_count: int = _state.inventory.get_slot(corn_slot).count
 	_press(&"interact")
@@ -809,9 +810,7 @@ func _run() -> void:
 	while _state.cabin_damage < 1 and waited < 900:
 		await physics_frame
 		waited += 1
-	var mend: Area2D = cabin.get_node("Damage/Mend")
 	_check(_state.cabin_damage >= 1, "left alone, a coyote tears at the cabin wall")
-	_check(mend.collision_layer == 4 and mend.prompt.contains("wood"), "which can then be mended ('%s')" % mend.prompt)
 
 	var eater: Node2D = pack.spawn_at(grid.cell_center(paths.nearest_open(bait[0] + Vector2i(3, 0))))
 	var eater_cell: Vector2i = eater.job_cell
@@ -851,13 +850,130 @@ func _run() -> void:
 	_check(pack.release() == 2, "the other two are still out there tonight")
 	pack.clear()
 
+	# --- The hammer mends: one swing and one piece of wood for each point.
 	var wood: Resource = item_db.get_item(&"wood")
-	var damage_now: int = _state.cabin_damage
-	_state.inventory.add_item(wood, damage_now)
-	var wood_before: int = _state.inventory.count_of(wood)
-	cabin.get_node("Damage")._on_mend(player)
-	_check(_state.cabin_damage == 0 and _state.inventory.count_of(wood) == wood_before - damage_now and mend.collision_layer == 0,
-			"mending the cabin takes one wood for each point of damage (%d)" % damage_now)
+	var hammer_slot: int = _to_hotbar(item_db.get_item(&"hammer"))
+	_check(hammer_slot != -1 and _find_slot(item_db.get_item(&"saw")) != -1, "the starting kit has a hammer and a saw")
+	_state.rest_fully()
+	_state.mend_cabin(8)
+	_state.damage_cabin(2)
+	var wall_cell: Vector2i = grid.cell_at(cabin.global_position + Vector2(-24, -8))
+	player.global_position = cabin.global_position + Vector2(-24, 12)
+	await _physics_frames(2)
+	_state.select_slot(hammer_slot)
+	_state.inventory.remove_item(wood, 999)
+	_check(item_user.action_at(wall_cell) == item_user.Action.NONE, "without wood the hammer can do nothing for the cabin")
+	_state.inventory.add_item(wood, 30)
+	_check(item_user.action_at(wall_cell) == item_user.Action.REPAIR, "with wood, the clawed cabin can be hammered")
+	await item_user.use_item_at(wall_cell)
+	_check(_state.cabin_damage == 1 and _state.inventory.count_of(wood) == 29, "one swing mends one point for one piece of wood")
+	await item_user.use_item_at(wall_cell)
+	_check(_state.cabin_damage == 0 and item_user.action_at(wall_cell) == item_user.Action.NONE,
+			"a second finishes it, and then there is nothing left to mend")
+
+	# --- The saw builds: fence, gate, lantern post. A crop is fenced in.
+	var item_label: Label = main.get_node("UI/HUD/Bottom/ItemLabel")
+	var saw_slot: int = _to_hotbar(item_db.get_item(&"saw"))
+	_state.select_slot(saw_slot)
+	_state.blueprint_index = 0
+	var fence_piece: Resource = _state.blueprint()
+	await _frames(2)
+	_check(fence_piece.id == &"fence" and item_label.text.contains("Fence") and item_label.text.contains("2 wood"),
+			"the saw starts on the fence and the HUD says what it costs ('%s')" % item_label.text)
+	# Three by three tiles of bare ground: the crop goes in the middle.
+	var pen := Vector2i(-1, -1)
+	for y: int in range(20, 27):
+		for x: int in range(16, 27):
+			var bare := pen == Vector2i(-1, -1)
+			for offset_y: int in 3:
+				for offset_x: int in 3:
+					if not grid.can_build(Vector2i(x + offset_x, y + offset_y)):
+						bare = false
+			if bare:
+				pen = Vector2i(x, y)
+	_check(pen != Vector2i(-1, -1), "(there is a bare three-by-three patch to build on, at %s)" % pen)
+	var centre: Vector2i = pen + Vector2i(1, 1)
+	var ring: Array[Vector2i] = []
+	for offset_y: int in 3:
+		for offset_x: int in 3:
+			if Vector2i(offset_x, offset_y) != Vector2i(1, 1):
+				ring.append(pen + Vector2i(offset_x, offset_y))
+	player.global_position = far_corner
+	await _physics_frames(2)
+	_check(item_user.action_at(ring[0]) == item_user.Action.BUILD, "bare ground can be built on")
+	await item_user.use_item_at(ring[0])
+	_check(_state.farm.is_built(ring[0]) and _state.inventory.count_of(wood) == 26, "a length of fence goes up for two wood")
+	_check(not grid.can_till(ring[0]) and not grid.can_build(ring[0]) and grid.built_node(ring[0]) != null,
+			"and that tile can no longer be tilled or built on")
+	await item_user.use_item_at(ring[1])
+	await _physics_frames(2)
+	var first_length: Node2D = grid.built_node(ring[0])
+	_check(first_length.connections == first_length.EAST and first_length.get_node("Sprite2D").frame_coords == Vector2i(first_length.EAST, 0),
+			"lengths side by side join up (%d)" % first_length.connections)
+	_check(not paths.is_open(ring[0]), "animals cannot walk through a fence")
+	_press(&"cycle_blueprint")
+	await _frames(2)
+	_release(&"cycle_blueprint")
+	_check(_state.blueprint().id == &"gate" and item_label.text.contains("Gate"), "F moves the saw on to the gate ('%s')" % item_label.text)
+	var gate_cell: Vector2i = pen + Vector2i(1, 2)
+	await item_user.use_item_at(gate_cell)
+	var gate_node: Node2D = grid.built_node(gate_cell)
+	_check(_state.farm.get_built(gate_cell).id == &"gate" and _state.inventory.count_of(wood) == 21, "the gate takes three wood")
+	_check(gate_node.collision_layer == 64 and player.collision_mask & 64 == 0, "the player walks through a gate; nothing stops them")
+	for cell: Vector2i in ring:
+		if not _state.farm.is_built(cell):
+			_state.farm.build(cell, fence_piece)
+	_state.farm.till(centre)
+	_state.farm.plant(centre, corn_crop)
+	await _physics_frames(2)
+	_check(not paths.can_reach(far_corner, grid.cell_center(centre)), "a crop fenced all round cannot be walked to")
+	var way_in: Dictionary = paths.breach(far_corner, grid.cell_center(centre))
+	_check(not way_in.is_empty() and ring.has(way_in.piece), "but a coyote can tell which piece stands in its way")
+
+	# With nothing else to eat and the cabin past hurting, a coyote breaks in.
+	for cell: Vector2i in _state.farm.crop_cells():
+		if cell != centre:
+			_state.farm.eat_crop(cell)
+	_state.damage_cabin(8)
+	var breaker: Node2D = pack.spawn_at(grid.cell_center(paths.nearest_open(pen + Vector2i(6, 1))))
+	var struck: Vector2i = breaker.job_cell
+	_check(breaker.job == breaker.Job.FENCE and ring.has(struck), "a coyote after a fenced crop goes for the fence")
+	waited = 0
+	while _state.farm.built_damage.get(struck, 0) < 1 and waited < 900:
+		await physics_frame
+		waited += 1
+	pack.clear()
+	await _frames(2)
+	var struck_node: Node2D = grid.built_node(struck)
+	_check(_state.farm.built_damage.get(struck, 0) >= 1 and struck_node.damage >= 1, "and damages it")
+	_state.select_slot(hammer_slot)
+	_check(item_user.action_at(struck) == item_user.Action.REPAIR, "the hammer mends fences too")
+	var wood_before_mend: int = _state.inventory.count_of(wood)
+	var blows: int = _state.farm.built_damage.get(struck, 0)
+	for blow: int in blows:
+		await item_user.use_item_at(struck)
+	_check(not _state.farm.built_damage.has(struck) and _state.inventory.count_of(wood) == wood_before_mend - blows and struck_node.damage == 0,
+			"at a piece of wood a blow (%d)" % blows)
+	_check(_state.farm.damage_built(struck, 99) and not _state.farm.is_built(struck), "enough blows bring a piece down")
+	await _physics_frames(2)
+	var raider: Node2D = pack.spawn_at(grid.cell_center(paths.nearest_open(pen + Vector2i(6, 1))))
+	_check(raider.job == raider.Job.CROP and raider.job_cell == centre, "and then the crop behind it is fair game")
+	pack.clear()
+	_state.mend_cabin(8)
+
+	# Taking a piece down gives the wood back. A lantern post lights up.
+	_state.select_slot(saw_slot)
+	var wood_before_down: int = _state.inventory.count_of(wood)
+	_check(item_user.dismantle_at(ring[0]) and not _state.farm.is_built(ring[0]) and _state.inventory.count_of(wood) == wood_before_down + 2,
+			"a fence taken down gives its wood back")
+	_state.cycle_blueprint()
+	_check(_state.blueprint().id == &"lantern_post", "the saw's third piece is a lantern post")
+	await item_user.use_item_at(ring[0])
+	var post: Node2D = grid.built_node(ring[0])
+	_check(post != null and post.has_node("Light") and _state.inventory.count_of(wood) == wood_before_down + 2 - 4,
+			"which takes four wood and carries a light")
+	var kept_fence: Vector2i = ring[1]
+	_state.rest_fully()
 	_clock.minutes = 10 * 60.0
 	_state.heal(_state.max_health)
 	await _frames(2)
@@ -930,6 +1046,9 @@ func _run() -> void:
 	player = world.area.get_node("Entities/Player")
 	_check(world.area.get_node("FarmGrid").cell_at(player.global_position) == CABIN_DOOR_CELL, "onto the cabin's doorstep")
 	var soil: TileMapLayer = world.area.get_node("Map/Soil")
+	var grid_again: Node = world.area.get_node("FarmGrid")
+	_check(grid_again.built_node(kept_fence) != null and grid_again.built_node(kept_fence).connections != 0,
+			"what was built is standing again, still joined up")
 	_check(plots_before > 0 and soil.get_used_cells().size() == plots_before,
 			"the tilled plots are drawn again (%d)" % soil.get_used_cells().size())
 	var objects_again: TileMapLayer = world.area.get_node("Map/Objects")
@@ -1041,6 +1160,17 @@ func _release(action: StringName) -> void:
 func _until_idle(player: Node2D) -> void:
 	while player.busy:
 		await process_frame
+
+
+## The hotbar slot holding `item`, bringing it up from the backpack (in
+## exchange for whatever is in the last hotbar slot) if need be. -1 if the
+## player has none.
+func _to_hotbar(item: Resource) -> int:
+	var slot := _find_slot(item)
+	if slot >= _state.HOTBAR_SIZE:
+		_state.inventory.move_slot(slot, _state.HOTBAR_SIZE - 1)
+		slot = _state.HOTBAR_SIZE - 1
+	return slot
 
 
 func _find_slot(item: Resource) -> int:

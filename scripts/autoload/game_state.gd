@@ -17,6 +17,8 @@ const STARTING_ITEMS := {
 	&"scythe": 1,
 	&"corn_seeds": 12,
 	&"bean_seeds": 12,
+	&"hammer": 1,
+	&"saw": 1,
 	&"revolver_rounds": 24,
 }
 const STARTING_HEALTH := 10
@@ -66,6 +68,8 @@ var shipping_bin: Dictionary[StringName, int] = {}
 ## back tomorrow.
 var wildlife_killed: Dictionary[String, bool] = {}
 
+## Which of ItemDB.buildables() the saw is set to build.
+var blueprint_index: int = 0
 ## How torn up the cabin is, 0 to CABIN_MAX_DAMAGE. It stays until mended.
 var cabin_damage: int = 0
 ## Coyotes of tonight's pack that have been killed. The rest come back if
@@ -120,6 +124,22 @@ func pass_out(cause: StringName) -> void:
 
 func heal(amount: int) -> void:
 	health += amount
+
+
+## What the saw builds right now, or null if nothing can be built.
+func blueprint() -> BuildableData:
+	var all := ItemDB.buildables()
+	if all.is_empty():
+		return null
+	return all[posmod(blueprint_index, all.size())]
+
+
+func cycle_blueprint(step: int = 1) -> void:
+	var all := ItemDB.buildables()
+	if all.is_empty():
+		return
+	blueprint_index = posmod(blueprint_index + step, all.size())
+	EventBus.blueprint_changed.emit()
 
 
 func damage_cabin(amount: int) -> void:

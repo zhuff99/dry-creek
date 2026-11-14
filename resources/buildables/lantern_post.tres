@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BuildableData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/buildable_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/tilesets/tileset_camp.png" id="2_icon"]
+[ext_resource type="PackedScene" path="res://scenes/objects/lantern_post.tscn" id="3_scene"]
+[ext_resource type="Resource" path="res://resources/items/wood.tres" id="4_wood"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_icon"]
+atlas = ExtResource("2_icon")
+region = Rect2(96, 80, 16, 32)
+
+[resource]
+script = ExtResource("1_script")
+id = &"lantern_post"
+display_name = "Lantern Post"
+description = "Lights the ground around it at night."
+icon = SubResource("AtlasTexture_icon")
+scene = ExtResource("3_scene")
+material = ExtResource("4_wood")
+material_count = 4
+connects = false
+sort_order = 2

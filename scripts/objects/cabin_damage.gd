@@ -1,24 +1,24 @@
 extends Node2D
 ## What the coyotes have done to the cabin's front wall: claw marks for each
-## point of damage, and a spot at the wall where the player mends it with
-## wood, one piece per point.
+## point of damage. It is mended with the hammer, one piece of wood and one
+## swing per point (see PlayerItemUser), which is why it is in the
+## "repairable" group and answers its three questions.
 ##
 ## A torn-up cabin is draughty, so the player sleeps worse in it (see
 ## GameState.DRAUGHT_STAMINA).
 
-const WOOD := &"wood"
 const MARK := Color("3b2a22")
 ## Where marks may go on the wall, left and right of the door and below the
 ## windows, in the cabin's own coordinates.
 const WALL_SPANS: Array[Rect2] = [Rect2(-38, -9, 24, 6), Rect2(14, -9, 24, 6)]
-
-@onready var _mend: Interactable = $Mend
+## The cabin's footprint, in its own coordinates: a click on any tile whose
+## centre is inside counts as a click on the cabin.
+const FOOTPRINT := Rect2(-44, -30, 88, 34)
 
 
 func _ready() -> void:
-	EventBus.cabin_damage_changed.connect(_on_damage_changed)
-	_mend.interacted.connect(_on_mend)
-	_on_damage_changed(GameState.cabin_damage)
+	add_to_group(&"repairable")
+	EventBus.cabin_damage_changed.connect(func(_damage: int) -> void: queue_redraw())
 
 
 func _draw() -> void:
@@ -35,25 +35,15 @@ func _draw() -> void:
 			draw_line(top + Vector2(0.5, 0.5), top + Vector2(2.5, 4.5), MARK, 1.0)
 
 
-func _on_damage_changed(damage: int) -> void:
-	queue_redraw()
-	# Off the "interactable" layer when there is nothing to mend.
-	_mend.collision_layer = 4 if damage > 0 else 0
-	_mend.prompt = "Mend the cabin (%d wood)" % damage
+## True if the tile `cell` of `grid` is part of the cabin.
+func covers_cell(grid: FarmGrid, cell: Vector2i) -> bool:
+	return FOOTPRINT.has_point(to_local(grid.cell_center(cell)))
 
 
-func _on_mend(_player: Player) -> void:
-	var wood := ItemDB.get_item(WOOD)
-	var have := GameState.inventory.count_of(wood)
-	if have <= 0:
-		EventBus.toast_requested.emit("You need wood to mend the cabin.")
-		Audio.play(&"error")
-		return
-	var used := mini(have, GameState.cabin_damage)
-	GameState.inventory.remove_item(wood, used)
-	GameState.mend_cabin(used)
-	Audio.play(&"chop")
-	if GameState.cabin_damage > 0:
-		EventBus.toast_requested.emit("Patched what you could. %d more wood would finish it." % GameState.cabin_damage)
-	else:
-		EventBus.toast_requested.emit("The cabin is mended.")
+## Points of damage waiting to be mended.
+func repair_needed() -> int:
+	return GameState.cabin_damage
+
+
+func repair(amount: int) -> void:
+	GameState.mend_cabin(amount)

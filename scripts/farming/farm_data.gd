@@ -1,7 +1,7 @@
 class_name FarmData
 extends RefCounted
-## All tilled plots on the ranch, which debris has been cleared, and the rules
-## for changing them.
+## All tilled plots on the ranch, which debris has been cleared, what the
+## player has built, and the rules for changing them.
 ##
 ## Holds no nodes. FarmGrid draws it when the farm scene is loaded, but
 ## advance_day() works without a scene, so crops keep growing (or drying out)
@@ -11,6 +11,8 @@ extends RefCounted
 signal plot_changed(cell: Vector2i)
 ## A rock, tree or patch of brush was removed for good.
 signal debris_cleared(cell: Vector2i)
+## Something was built, taken down, damaged or mended at `cell`.
+signal built_changed(cell: Vector2i)
 
 var plots: Dictionary[Vector2i, FarmPlot] = {}
 ## Cells whose debris is gone. The map itself is never edited, so this is what
@@ -18,6 +20,10 @@ var plots: Dictionary[Vector2i, FarmPlot] = {}
 var cleared_debris: Dictionary[Vector2i, bool] = {}
 ## Hits landed so far on debris that takes more than one.
 var debris_damage: Dictionary[Vector2i, int] = {}
+## What stands on each built tile: the id of its BuildableData.
+var built: Dictionary[Vector2i, StringName] = {}
+## Blows taken so far by built pieces that are damaged.
+var built_damage: Dictionary[Vector2i, int] = {}
 
 
 func get_plot(cell: Vector2i) -> FarmPlot:
@@ -37,7 +43,7 @@ func get_crop(cell: Vector2i) -> CropData:
 
 
 func till(cell: Vector2i) -> bool:
-	if plots.has(cell):
+	if plots.has(cell) or built.has(cell):
 		return false
 	plots[cell] = FarmPlot.new()
 	plot_changed.emit(cell)
@@ -88,6 +94,60 @@ func harvest(cell: Vector2i) -> ItemStack:
 		plot.days_grown = 0
 	plot_changed.emit(cell)
 	return ItemStack.new(crop.harvest_item, amount)
+
+
+func is_built(cell: Vector2i) -> bool:
+	return built.has(cell)
+
+
+## What is built at `cell`, or null.
+func get_built(cell: Vector2i) -> BuildableData:
+	if not built.has(cell):
+		return null
+	return ItemDB.get_buildable(built[cell])
+
+
+## Puts `piece` up at `cell`. Not on soil, and not where something stands.
+func build(cell: Vector2i, piece: BuildableData) -> bool:
+	if built.has(cell) or plots.has(cell):
+		return false
+	built[cell] = piece.id
+	built_changed.emit(cell)
+	return true
+
+
+## Takes down whatever is built at `cell` and returns what it was, or null.
+func unbuild(cell: Vector2i) -> BuildableData:
+	var piece := get_built(cell)
+	if piece == null:
+		return null
+	built.erase(cell)
+	built_damage.erase(cell)
+	built_changed.emit(cell)
+	return piece
+
+
+## Lands blows on the piece at `cell`. True if that brought it down.
+func damage_built(cell: Vector2i, amount: int) -> bool:
+	var piece := get_built(cell)
+	if piece == null:
+		return false
+	var damage: int = built_damage.get(cell, 0) + amount
+	if damage >= piece.max_health:
+		unbuild(cell)
+		return true
+	built_damage[cell] = damage
+	built_changed.emit(cell)
+	return false
+
+
+func repair_built(cell: Vector2i, amount: int) -> void:
+	var damage: int = built_damage.get(cell, 0) - amount
+	if damage > 0:
+		built_damage[cell] = damage
+	else:
+		built_damage.erase(cell)
+	built_changed.emit(cell)
 
 
 ## Cells that have a crop growing in them, at any age.

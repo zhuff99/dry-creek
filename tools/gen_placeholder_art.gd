@@ -45,6 +45,31 @@ const PELT_ICON: Array[String] = [
 	"................",
 	"................",
 ]
+# A hand saw: the tool for building.
+const SAW_ICON: Array[String] = [
+	"................",
+	"................",
+	"..........OOO...",
+	".........OGGGO..",
+	"........OGGOGGO.",
+	".......OMOGOOGO.",
+	"......OMMMOGGGO.",
+	".....OMMMMSOGO..",
+	"....OMMMMSOOO...",
+	"...OMMMMSO......",
+	"..OMMMMSO.......",
+	".OMMMMSO........",
+	".OSOSOSO........",
+	"..O.O.O.........",
+	"................",
+	"................",
+]
+# Fence and gate timber, in the pack's wood colours.
+const TIMBER_OUTLINE := Color("141b1b")
+const TIMBER := Color("a3754e")
+const TIMBER_LIGHT := Color("d78b4a")
+const TIMBER_SHADE := Color("91522c")
+const TIMBER_DARK := Color("61372e")
 const REVOLVER_ICON: Array[String] = [
 	"................",
 	"................",
@@ -102,6 +127,14 @@ func _init() -> void:
 	_save(_crop_strip(BEAN, true), "crops/beans_growth.png")
 	_save(_from_rows(REVOLVER_ICON), "items/revolver.png")
 	_save(_from_rows(PELT_ICON), "items/coyote_pelt.png")
+	_save(_from_rows(SAW_ICON), "items/saw.png")
+	var fence := _fence_sheet()
+	_save(fence, "built/fence.png")
+	# A length joined left and right is the picture of "a fence".
+	_save(fence.get_region(Rect2i(10 * T, 0, T, T)), "built/fence_icon.png")
+	var gate := _gate_sheet()
+	_save(gate, "built/gate.png")
+	_save(gate.get_region(Rect2i(0, 0, T, T)), "built/gate_icon.png")
 	_save(_from_rows(ROUNDS_ICON), "items/revolver_rounds.png")
 	_save(_from_rows(REVOLVER_HELD), "weapons/revolver_held.png")
 	print("Placeholder art written to ", OUT)
@@ -133,6 +166,70 @@ func _from_rows(rows: Array[String]) -> Image:
 			var letter := rows[y][x]
 			if letter != ".":
 				img.set_pixel(x, y, INK[letter])
+	return img
+
+
+## Every way a length of fence can join its neighbours, as one row of 16
+## tiles: the column number has bit 1 set for a neighbour to the north, 2
+## east, 4 south, 8 west. A second row has the same pieces broken.
+func _fence_sheet() -> Image:
+	var img := _new(16 * T, 2 * T)
+	for sides: int in 16:
+		_fence_piece(img, sides * T, 0, sides, false)
+		_fence_piece(img, sides * T, T, sides, true)
+	return img
+
+
+func _fence_piece(img: Image, ox: int, oy: int, sides: int, broken: bool) -> void:
+	# Rails first, so the post stands in front of them.
+	if sides & 2:
+		_fence_rails(img, ox + 10, oy, ox + 12, broken)
+	if sides & 8:
+		_fence_rails(img, ox, oy, ox + 2, broken)
+	# A run going away up or down the screen: a plank from post to post.
+	for top: int in [0 if sides & 1 else -1, 14 if sides & 4 else -1]:
+		if top >= 0 and not broken:
+			_rect(img, ox + 6, oy + top, 4, 2, TIMBER_OUTLINE)
+			_rect(img, ox + 7, oy + top, 2, 2, TIMBER_SHADE)
+	_rect(img, ox + 5, oy + 1, 6, 14, TIMBER_OUTLINE)
+	_rect(img, ox + 6, oy + 2, 4, 12, TIMBER)
+	_rect(img, ox + 6, oy + 2, 1, 12, TIMBER_LIGHT)
+	_rect(img, ox + 9, oy + 2, 1, 12, TIMBER_SHADE)
+	_rect(img, ox + 6, oy + 2, 4, 1, TIMBER_LIGHT)
+	if broken:
+		_rect(img, ox + 7, oy + 5, 1, 3, TIMBER_DARK)
+		_rect(img, ox + 8, oy + 7, 1, 3, TIMBER_DARK)
+
+
+## Two rails across the six pixels from `x`. A broken piece has its top rail
+## snapped at `gap_x`.
+func _fence_rails(img: Image, x: int, oy: int, gap_x: int, broken: bool) -> void:
+	for top: int in [4, 8]:
+		_rect(img, x, oy + top, 6, 4, TIMBER_OUTLINE)
+		_rect(img, x, oy + top + 1, 6, 1, TIMBER_LIGHT)
+		_rect(img, x, oy + top + 2, 6, 1, TIMBER_SHADE)
+	if broken:
+		_rect(img, gap_x, oy + 4, 2, 4, CLEAR)
+
+
+## The gate, hung across the way (frame 0) and along it (frame 1). Paler
+## than the fence, with a brace, so it reads as the way through.
+func _gate_sheet() -> Image:
+	var img := _new(2 * T, T)
+	for x: int in [0, 12]:
+		_rect(img, x, 1, 4, 14, TIMBER_OUTLINE)
+		_rect(img, x + 1, 2, 2, 12, TIMBER)
+		_rect(img, x + 1, 2, 2, 1, TIMBER_LIGHT)
+	for top: int in [4, 9]:
+		_rect(img, 4, top, 8, 3, TIMBER_OUTLINE)
+		_rect(img, 4, top + 1, 8, 1, TIMBER_LIGHT)
+	for step: int in 8:
+		img.set_pixel(4 + step, 9 - step * 4 / 7, TIMBER_DARK)
+	_rect(img, T + 5, 0, 6, 16, TIMBER_OUTLINE)
+	_rect(img, T + 6, 0, 4, 16, TIMBER_LIGHT)
+	_rect(img, T + 9, 0, 1, 16, TIMBER)
+	for y: int in [3, 12]:
+		_rect(img, T + 6, y, 4, 1, TIMBER_DARK)
 	return img
 
 

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ToolData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tool_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ninja_adventure/items/Hammer.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+stamina_cost = 2.0
+tool_type = 5
+start_sound = &"swing"
+id = &"hammer"
+display_name = "Hammer"
+description = "Mends what is broken: the cabin, a fence. One piece of wood a swing."
+icon = ExtResource("2_icon")
+max_stack = 1
+buy_price = 120

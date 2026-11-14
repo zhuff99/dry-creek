@@ -49,6 +49,11 @@ signal player_passed_out(money_lost: int, cause: StringName)
 @warning_ignore("unused_signal")
 signal cabin_damage_changed(damage: int)
 
+# --- Building ---
+## The saw was set to build something else (GameState.blueprint()).
+@warning_ignore("unused_signal")
+signal blueprint_changed
+
 # --- Stamina ---
 ## `ceiling` is how far it can refill today; `max_stamina` is a rested day's.
 @warning_ignore("unused_signal")
