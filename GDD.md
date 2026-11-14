@@ -26,11 +26,12 @@ Pillars:
 ### 3.1 Ranch restoration
 - The ranch is open dirt, not sand: all bare ground can be tilled. It starts overgrown, with rocks, trees, weeds, and grass covering most of it, so usable land is whatever has been cleared.
 - **The road** is the one part of the ranch that can never be planted: a footpath from the cabin door, a wagon road north to the river, and the same road east off the edge of the map, which is the way to town. It keeps the dooryard and the way to water open however much is planted. Apart from the road, the river and the ground the cabin and its yard furniture stand on, every tile can be cleared and planted.
-- Debris is cleared with tools: pickaxe for rocks (2 hits, drops stone), axe for trees (3 hits, drops wood), scythe for weeds and grass (1 hit, drops fiber). It will cost stamina once stamina exists. Rocks and trees block movement; weeds and grass only block tilling.
+- Debris is cleared with tools: pickaxe for rocks (2 hits, drops stone), axe for trees (3 hits, drops wood), scythe for weeds and grass (1 hit, drops fiber). Each hit costs stamina. Rocks and trees block movement; weeds and grass only block tilling.
 - The axe, pickaxe and scythe are bought in town. Until the town exists (M3) they are in the starting kit.
 - Wood, stone and fiber are the materials the carpenter asks for.
 - Broken structures (fence, barn, coop, well) are repaired or rebuilt through the carpenter for money plus materials.
 - Land expands in tiers; each tier is gated by a carpenter job or a cleared obstacle.
+- **Grass is the player's to add (planned, M6).** The ranch stays bare dirt; a prairie look was tried as a mock-up and set aside in favour of letting the player make it. Grass seed is sown on bare dirt like a crop and spreads a little each day to the dirt beside it. Grassed ground cannot be tilled until it is cut or dug up again, never grows on the road, and is what cattle and the horse graze on, so pasture is something the player lays out. The art pack's grass tiles share the dirt tiles' layout (grass ground, dirt patches in grass, water on grass), so the map needs no new art for it.
 
 ### 3.2 Water
 - The watering can holds a limited number of uses (20 to start) and refills at a water source.
@@ -190,11 +191,11 @@ Everything hangs off one mechanism: **actions emit world events, and only NPCs w
 | # | Name | Scope |
 |---|---|---|
 | **M1** | Farming vertical slice | Movement and camera, farm map, till/plant/water/harvest two crops, inventory and hotbar, day counter, sleep, shipping crate. |
-| **M2** | The working day | Clock and day/night tint, stamina, the broken well, clearing costs stamina, crop withering, save/load on sleep, title/new-game flow. Watering can capacity, river refill and debris clearing are already in. |
+| **M2** | The working day | Clock and day/night tint, the broken well, crop withering, save/load on sleep, title/new-game flow. Stamina, watering can capacity, river refill and debris clearing are already in. |
 | **M3** | Town and economy | Area transitions, town map, general store (buy seeds and the axe, pickaxe and scythe, which then leave the starting kit; sell goods), carpenter (first well and fence repairs), NPCs with schedules and basic dialogue, sheriff and deputies present as residents. |
 | **M4** | Combat core | Draw/holster, aim line, firing, reloading, revolver, player health, first wildlife (snake, coyote), first badlands map with valuables. |
 | **M5** | Law and wanted v1 | Perception, townsfolk reactions, witnesses and reporting, bribe/intimidate, bounty, arrest, jail day-skip, pay-off, deputy replacement. |
-| **M6** | Animals and seasons | Coop and barn, chickens, cattle, feed, horse and mounting, full season calendar, irrigation. |
+| **M6** | Animals and seasons | Coop and barn, chickens, cattle, feed, horse and mounting, full season calendar, irrigation. Grass seed: the player sows grass on bare dirt, it spreads, and it is the pasture animals graze (see 3.1). |
 | **M7** | Outlaws and escalation | Bandit gangs, bounty board, rifle and shotgun, blacksmith upgrades, posse travel, bounty hunters at the ranch. |
 | **M8** | Factions | Tribal and railroad/army reputation, sacred sites, trade, faction-aware witnesses. |
 | **M9** | Saloon | Blackjack, then poker; shows and events; rumors that point at content. |
