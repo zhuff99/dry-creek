@@ -1,8 +1,12 @@
 extends SceneTree
-## Dev tool: plays the Milestone 1 loop by script, checks the results, and saves
-## screenshots. Needs a window, so do not pass --headless.
+## Dev tool: plays the game by script, checks the results, and saves
+## screenshots.
 ##
 ##   godot --path . -s res://tools/smoke_test.gd -- <screenshot_folder>
+##
+## Add --headless to run the checks with no window and no screenshots. That
+## is also the steadier way to run it while the computer is in use: a window
+## that loses focus drops held keys, and a hidden one runs slowly.
 ##
 ## Exit code is the number of failed checks. The run is silent: it mutes the
 ## master bus, and checks sounds by counting which cues were played.
@@ -187,10 +191,16 @@ func _run() -> void:
 	var all_cells: Array[Vector2i] = []
 	all_cells.append_array(CORN_CELLS)
 	all_cells.append_array(BEAN_CELLS)
+	_check(_state.stamina == 100.0 and _state.stamina_ceiling == 100.0 and _state.max_stamina == 100.0,
+			"the day starts with full stamina (100)")
 	_state.select_slot(HOE_SLOT)
+	var hoe_cost: float = _state.selected_stack().item.stamina_cost
 	for cell: Vector2i in all_cells:
 		await item_user.use_item_at(cell)
 	_check(_state.farm.plots.size() == 6, "six plots tilled")
+	_check(hoe_cost > 0.0 and is_equal_approx(_state.stamina_ceiling, 100.0 - 6 * hoe_cost * _state.FATIGUE_SHARE),
+			"each swing of the hoe costs stamina and wears the day's limit down a little (limit %.1f)" % _state.stamina_ceiling)
+	var limit_after_tilling: float = _state.stamina_ceiling
 	_state.select_slot(CORN_SEED_SLOT)
 	for cell: Vector2i in CORN_CELLS:
 		await item_user.use_item_at(cell)
@@ -201,7 +211,39 @@ func _run() -> void:
 	_check(_state.inventory.get_slot(BEAN_SEED_SLOT).count == 9, "three bean seeds used")
 	await item_user.use_item_at(CORN_CELLS[0])
 	_check(_state.inventory.get_slot(BEAN_SEED_SLOT).count == 9, "cannot plant on an occupied plot")
+	_check(_state.stamina_ceiling == limit_after_tilling, "planting takes no stamina")
 	await _water(item_user, all_cells)
+
+	# --- Stamina: a rest brings it back, but only up to the day's limit.
+	# Out of stamina, tools do nothing until some returns.
+	var stamina_bar: Control = main.get_node("UI/HUD/TopBar/Vitals/Bars/Stamina")
+	var toast: Label = main.get_node("UI/HUD/ToastRow/ToastLabel")
+	var limit: float = _state.stamina_ceiling
+	_check(limit < limit_after_tilling and _state.stamina < limit, "watering costs a little too (%.1f of %.1f)" % [_state.stamina, limit])
+	await create_timer(_state.STAMINA_REST_DELAY + _state.max_stamina / _state.STAMINA_REGEN).timeout
+	_check(is_equal_approx(_state.stamina, limit) and limit < _state.max_stamina,
+			"a rest refills stamina to the day's limit, not to full (%.1f of %d)" % [_state.stamina, _state.max_stamina])
+	var spare_cell := Vector2i(17, 18)
+	_state.select_slot(HOE_SLOT)
+	_check(grid.can_till(spare_cell), "(there is bare ground beside the player)")
+	_state.stamina = hoe_cost - 1.0
+	item_user._explain_if_tired(spare_cell)
+	await item_user.use_item_at(spare_cell)
+	_check(_state.farm.plots.size() == 6 and not player.busy, "too tired, the hoe does nothing")
+	_check(toast.text.contains("breath"), "and the game says to catch your breath ('%s')" % toast.text)
+	_state.stamina_ceiling = hoe_cost - 1.0
+	item_user._explain_if_tired(spare_cell)
+	_check(toast.text.contains("sleep"), "worn right down, it says to sleep ('%s')" % toast.text)
+	_state.stamina_ceiling = 60.0
+	_state.stamina = 25.0
+	_state._report_stamina()
+	await _frames(2)
+	_check(stamina_bar._stamina == _state.stamina and stamina_bar._stamina < 60.0 and stamina_bar._ceiling == 60.0, "the stamina bar shows what is left and the day's limit")
+	await _shot("02b_stamina_bar")
+	_state.stamina_ceiling = limit
+	_state.stamina = limit
+	_state._report_stamina()
+	_state.select_slot(CAN_SLOT)
 	_check(_state.farm.get_plot(CORN_CELLS[0]).watered, "plots are watered")
 	await _shot("02_planted_and_watered")
 
@@ -439,6 +481,7 @@ func _run() -> void:
 	var gun: Resource = _state.weapon
 	var rounds: Resource = item_db.get_item(&"revolver_rounds")
 	var spare: int = _state.inventory.count_of(rounds)
+	var limit_before_shooting: float = _state.stamina_ceiling
 	_check(gun != null and _state.rounds_loaded == 6 and spare == 24, "the game starts with a loaded revolver and 24 spare rounds")
 	var bottle: Node2D = main.get_node("World/Farm/Entities/Bottle2")
 	player.global_position = FIRING_SPOT
@@ -513,6 +556,7 @@ func _run() -> void:
 		await _frames(2)
 		_release(&"primary_action")
 	_check(_state.rounds_loaded == 0, "six shots empty the cylinder")
+	_check(_state.stamina_ceiling == limit_before_shooting, "shooting takes no stamina")
 	await create_timer(0.6).timeout
 	_press(&"primary_action")
 	await _frames(2)
@@ -672,7 +716,7 @@ func _run() -> void:
 	_state.heal(_state.max_health)
 
 	# --- Health: a hit takes some, a second hit straight after does not.
-	var health_bar: ProgressBar = main.get_node("UI/HUD/TopBar/Health/Bar")
+	var health_bar: ProgressBar = main.get_node("UI/HUD/TopBar/Vitals/Bars/Health")
 	_check(_state.health == 10 and _state.max_health == 10 and health_bar.value == 10.0, "the player starts at full health (10)")
 	player.take_damage(3)
 	player.take_damage(3)
@@ -705,6 +749,7 @@ func _run() -> void:
 		await process_frame
 	_check(_clock.day == day_before + 1, "sleeping in the bed starts the next day")
 	_check(_state.health == _state.max_health, "a night's sleep restores health")
+	_check(_state.stamina == _state.max_stamina and _state.stamina_ceiling == _state.max_stamina, "and stamina, limit and all")
 	_check(world.area.name == "CabinInterior", "and you wake up inside")
 	await _shot("23_by_the_bed")
 	Input.action_press(&"move_up")
@@ -825,6 +870,10 @@ func _physics_frames(count: int) -> void:
 
 
 func _shot(name: String) -> void:
+	# Run with --headless there is nothing drawn to save; the checks still run.
+	if DisplayServer.get_name() == "headless":
+		await process_frame
+		return
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(_out_dir.path_join(name + ".png"))
 

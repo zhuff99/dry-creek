@@ -5,6 +5,7 @@
 
 [resource]
 script = ExtResource("1_script")
+stamina_cost = 2.0
 tool_type = 4
 start_sound = &"swing_blade"
 id = &"scythe"

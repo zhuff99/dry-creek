@@ -11,6 +11,8 @@ enum UseAnimation { SWING, POUR, DIP }
 @export var use_animation: UseAnimation = UseAnimation.SWING
 ## Uses the tool holds before it must be refilled. 0 = never runs out.
 @export_range(0, 200) var capacity: int = 0
+## Stamina one use takes. Filling a watering can is always free.
+@export_range(0.0, 20.0, 0.5) var stamina_cost: float = 3.0
 ## Sound cue ids (see SoundCue). Either may be left empty.
 ## Played as the motion begins: the swish of a swing, water leaving the can.
 @export var start_sound: StringName

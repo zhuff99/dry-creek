@@ -47,6 +47,7 @@ Pillars:
 ### 3.4 Time, stamina, sleep
 - A day runs on a clock (roughly 6am to 2am). Night is darker and more dangerous.
 - Tool use and combat rolls cost stamina. Sleeping restores it and advances the day. Passing out costs money and stamina.
+- **Built so far:** stamina starts at 100. Swinging a tool spends it (hoe 3, axe and pickaxe 4, scythe 2, a pour of the watering can 1; set per tool as `stamina_cost`). Planting, picking, filling the can and shooting cost nothing. After 1.2 seconds without working it refills at 14 a second, but only up to the day's limit: a quarter of everything spent is worn off that limit until the player sleeps. So short bursts are cheap, and a long day of work leaves less and less to work with. Out of stamina, tools do nothing until some returns (holding the button carries on by itself); once the limit is below a tool's cost, only sleep helps. The numbers are constants at the top of `GameState`. The bar sits under health: gold is what is left, the dim stretch comes back with rest, the hatched end is gone for the day.
 - Calendar: 4 seasons of 28 days.
 
 ### 3.5 Animals

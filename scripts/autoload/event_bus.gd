@@ -39,6 +39,14 @@ signal health_changed(health: int, max_health: int)
 @warning_ignore("unused_signal")
 signal player_passed_out(money_lost: int)
 
+# --- Stamina ---
+## `ceiling` is how far it can refill today; `max_stamina` is a rested day's.
+@warning_ignore("unused_signal")
+signal stamina_changed(stamina: float, ceiling: float, max_stamina: float)
+## The player tried to work without the stamina for it.
+@warning_ignore("unused_signal")
+signal stamina_lacking
+
 # --- Weapons ---
 ## The player's gun came out of, or went back into, its holster.
 @warning_ignore("unused_signal")

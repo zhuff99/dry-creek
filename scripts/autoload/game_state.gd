@@ -20,6 +20,14 @@ const STARTING_ITEMS := {
 	&"revolver_rounds": 24,
 }
 const STARTING_HEALTH := 10
+const STARTING_STAMINA := 100.0
+## Seconds without working before stamina starts coming back.
+const STAMINA_REST_DELAY := 1.2
+## Stamina regained per second after that.
+const STAMINA_REGEN := 14.0
+## How much of every point spent is gone until you sleep: the level stamina
+## refills to drops by this share of the cost.
+const FATIGUE_SHARE := 0.25
 ## Share of your money that passing out costs (someone has to get you home).
 const PASS_OUT_COST := 0.1
 ## The gun the ranch came with. It is worn, not carried in the bag.
@@ -34,6 +42,12 @@ var health: int = STARTING_HEALTH:
 	set(value):
 		health = clampi(value, 0, max_health)
 		EventBus.health_changed.emit(health, max_health)
+var max_stamina: float = STARTING_STAMINA
+## How far stamina refills today. Work wears it down; a night's sleep puts
+## it back to `max_stamina`.
+var stamina_ceiling: float = STARTING_STAMINA
+## What is left right now. Tool work spends it; shooting does not.
+var stamina: float = STARTING_STAMINA
 ## The gun on the player's hip, or null if they own none.
 var weapon: WeaponData
 ## Rounds in that gun right now.
@@ -47,6 +61,9 @@ var shipping_bin: Dictionary[StringName, int] = {}
 ## back tomorrow.
 var wildlife_killed: Dictionary[String, bool] = {}
 
+## Seconds of rest still needed before stamina starts refilling.
+var _rest_wait: float = 0.0
+
 
 func _ready() -> void:
 	for id: StringName in STARTING_ITEMS:
@@ -54,6 +71,16 @@ func _ready() -> void:
 	weapon = ItemDB.get_item(STARTING_WEAPON) as WeaponData
 	rounds_loaded = weapon.chambers
 	EventBus.day_ended.connect(_on_day_ended)
+
+
+func _process(delta: float) -> void:
+	if stamina >= stamina_ceiling:
+		return
+	_rest_wait -= delta
+	if _rest_wait > 0.0:
+		return
+	stamina = minf(stamina + STAMINA_REGEN * delta, stamina_ceiling)
+	_report_stamina()
 
 
 func add_money(amount: int) -> void:
@@ -77,6 +104,39 @@ func hurt(amount: int) -> void:
 
 func heal(amount: int) -> void:
 	health += amount
+
+
+## True if there is stamina for something costing `cost`.
+func can_exert(cost: float) -> bool:
+	return cost <= 0.0 or stamina >= cost
+
+
+## True if `cost` is more than today's rest can ever give back: no amount of
+## waiting will do, only sleep.
+func is_worn_out_for(cost: float) -> bool:
+	return cost > stamina_ceiling
+
+
+## Spends stamina on a piece of work. Most of it comes back with rest; the
+## remainder is the day's wear, and lowers how far the bar refills.
+func exert(cost: float) -> void:
+	if cost <= 0.0:
+		return
+	stamina = maxf(stamina - cost, 0.0)
+	stamina_ceiling = maxf(stamina_ceiling - cost * FATIGUE_SHARE, 0.0)
+	_rest_wait = STAMINA_REST_DELAY
+	_report_stamina()
+
+
+## Fully rested, as after a night's sleep.
+func rest_fully() -> void:
+	stamina_ceiling = max_stamina
+	stamina = max_stamina
+	_report_stamina()
+
+
+func _report_stamina() -> void:
+	EventBus.stamina_changed.emit(stamina, stamina_ceiling, max_stamina)
 
 
 func select_slot(index: int) -> void:
@@ -103,6 +163,7 @@ func shipping_bin_value() -> int:
 func _on_day_ended(_day: int) -> void:
 	# A night's sleep mends everything, for now.
 	health = max_health
+	rest_fully()
 	wildlife_killed.clear()
 	farm.advance_day()
 	var total := shipping_bin_value()

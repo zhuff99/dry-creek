@@ -53,6 +53,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		# Only clicks that reach the world count; clicks on UI never get here.
 		_primary_held = true
 		_explain_if_useless(target_cell)
+		_explain_if_tired(target_cell)
 		use_item_at(target_cell)
 	elif event.is_action_pressed(&"hotbar_next"):
 		GameState.select_slot(GameState.selected_slot + 1)
@@ -101,7 +102,14 @@ func use_item_at(cell: Vector2i) -> void:
 	if grid == null or _player.busy:
 		return
 	var where := grid.cell_center(cell)
-	match action_at(cell):
+	var action := action_at(cell)
+	# Too tired: nothing happens. With the button held, work picks up again
+	# by itself as stamina comes back.
+	var cost := stamina_cost_of(action)
+	if not GameState.can_exert(cost):
+		return
+	GameState.exert(cost)
+	match action:
 		Action.HARVEST:
 			_harvest(grid, cell, where)
 		Action.TILL:
@@ -120,6 +128,15 @@ func use_item_at(cell: Vector2i) -> void:
 				GameState.inventory.remove_from_slot(GameState.selected_slot, 1)
 				Audio.play(&"plant")
 				EventBus.report(&"crop_planted", _player, where, {"crop": seed_item.crop.id})
+
+
+## Stamina `action` takes with the item in hand. Swinging or pouring a tool
+## is work; planting, picking and filling the can are not.
+func stamina_cost_of(action: Action) -> float:
+	match action:
+		Action.TILL, Action.WATER, Action.CLEAR:
+			return _held_tool().stamina_cost
+	return 0.0
 
 
 ## Plays a tool animation toward `cell`. `effect` runs when the tool lands.
@@ -230,6 +247,21 @@ func _explain_if_useless(cell: Vector2i) -> void:
 	if reason != "":
 		EventBus.toast_requested.emit(reason)
 		Audio.play(&"error")
+
+
+## Says so when a click did nothing for want of stamina.
+func _explain_if_tired(cell: Vector2i) -> void:
+	if _player.busy:
+		return
+	var cost := stamina_cost_of(action_at(cell))
+	if GameState.can_exert(cost):
+		return
+	if GameState.is_worn_out_for(cost):
+		EventBus.toast_requested.emit("You're worn out. Get some sleep.")
+	else:
+		EventBus.toast_requested.emit("Out of breath. Give it a moment.")
+	EventBus.stamina_lacking.emit()
+	Audio.play(&"error")
 
 
 ## "pickaxe", "watering can": the enum name in plain words.

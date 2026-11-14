@@ -1,6 +1,6 @@
-[gd_resource type="Theme" format=3]
+[gd_resource type="Theme" format=3 uid="uid://m7yuj4psvhb3"]
 
-[ext_resource type="FontFile" path="res://assets/fonts/dry_creek.fnt" id="1_font"]
+[ext_resource type="FontFile" uid="uid://b8rjj6r82wk3d" path="res://assets/fonts/dry_creek.fnt" id="1_font"]
 
 [resource]
 default_font = ExtResource("1_font")

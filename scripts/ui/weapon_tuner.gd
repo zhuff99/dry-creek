@@ -104,6 +104,8 @@ func _build() -> void:
 	box.add_child(health_buttons)
 	_add_button(health_buttons, "Hurt 2", _hurt_player)
 	_add_button(health_buttons, "Heal", func() -> void: GameState.heal(GameState.max_health))
+	_add_button(health_buttons, "Tire 25", func() -> void: GameState.exert(25.0))
+	_add_button(health_buttons, "Rest", GameState.rest_fully)
 
 
 ## Exported whole or decimal numbers that were given a range.

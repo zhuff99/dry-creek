@@ -1,6 +1,6 @@
 extends Control
-## Always-on overlay: day, health, money, held item name, interaction prompt,
-## toasts.
+## Always-on overlay: day, health, stamina, money, held item name,
+## interaction prompt, toasts.
 
 const TOAST_HOLD_SECONDS := 2.0
 const TOAST_SECONDS_PER_LETTER := 0.04
@@ -11,7 +11,8 @@ var _gun_drawn: bool = false
 
 @onready var _day_label: Label = $TopBar/DayLabel
 @onready var _money_label: Label = $TopBar/MoneyLabel
-@onready var _health_bar: ProgressBar = $TopBar/Health/Bar
+@onready var _health_bar: ProgressBar = $TopBar/Vitals/Bars/Health
+@onready var _stamina_bar: StaminaBar = $TopBar/Vitals/Bars/Stamina
 @onready var _toast_label: Label = $ToastRow/ToastLabel
 @onready var _prompt_label: Label = $Bottom/PromptLabel
 @onready var _item_label: Label = $Bottom/ItemLabel
@@ -28,6 +29,9 @@ func _ready() -> void:
 	EventBus.rounds_changed.connect(func(_loaded: int) -> void: _refresh_item_label())
 	EventBus.health_changed.connect(_on_health_changed)
 	_on_health_changed(GameState.health, GameState.max_health)
+	EventBus.stamina_changed.connect(_stamina_bar.show_levels)
+	EventBus.stamina_lacking.connect(_on_stamina_lacking)
+	_stamina_bar.show_levels(GameState.stamina, GameState.stamina_ceiling, GameState.max_stamina)
 	_on_day_started(GameClock.day)
 	_on_money_changed(GameState.money)
 	_on_prompt_changed("")
@@ -47,6 +51,12 @@ func _on_health_changed(health: int, max_health: int) -> void:
 		# Flash the bar so a hit is noticed even when looking elsewhere.
 		_health_bar.modulate = Color(3, 3, 3)
 		create_tween().tween_property(_health_bar, "modulate", Color.WHITE, 0.35)
+
+
+## Flash the bar so it is clear why nothing happened.
+func _on_stamina_lacking() -> void:
+	_stamina_bar.modulate = Color(3, 1.2, 1.2)
+	create_tween().tween_property(_stamina_bar, "modulate", Color.WHITE, 0.35)
 
 
 func _on_money_changed(amount: int) -> void:

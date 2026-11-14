@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/hotbar.gd" id="2_hotbar"]
+[ext_resource type="Script" path="res://scripts/ui/stamina_bar.gd" id="3_stamina"]
 [ext_resource type="Texture2D" path="res://assets/ninja_adventure/ui/nine_path_bg_2.png" id="9_panel"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxFlat_backing"]
@@ -47,16 +48,20 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
 text = "Day 1"
 
-[node name="Health" type="PanelContainer" parent="TopBar"]
+[node name="Vitals" type="PanelContainer" parent="TopBar"]
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_backing")
 
-[node name="Bar" type="ProgressBar" parent="TopBar/Health"]
-custom_minimum_size = Vector2(52, 6)
+[node name="Bars" type="VBoxContainer" parent="TopBar/Vitals"]
 layout_mode = 2
-size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 1
+
+[node name="Health" type="ProgressBar" parent="TopBar/Vitals/Bars"]
+custom_minimum_size = Vector2(52, 5)
+layout_mode = 2
 mouse_filter = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_health_back")
 theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
@@ -64,6 +69,12 @@ max_value = 10.0
 step = 1.0
 value = 10.0
 show_percentage = false
+
+[node name="Stamina" type="Control" parent="TopBar/Vitals/Bars"]
+custom_minimum_size = Vector2(52, 5)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3_stamina")
 
 [node name="Spacer" type="Control" parent="TopBar"]
 layout_mode = 2
