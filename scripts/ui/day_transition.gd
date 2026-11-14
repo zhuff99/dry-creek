@@ -22,11 +22,13 @@ func _on_shipment_paid(total: int) -> void:
 	_last_payout = total
 
 
-func _on_player_passed_out(money_lost: int) -> void:
+func _on_player_passed_out(money_lost: int, cause: StringName) -> void:
+	var headline := "You passed out."
+	if cause == &"late":
+		headline = "You stayed up too late and dropped where you stood."
 	if money_lost > 0:
-		_run("You passed out.\nGetting you home cost $%d." % money_lost)
-	else:
-		_run("You passed out.")
+		headline += "\nGetting you home cost $%d." % money_lost
+	_run(headline)
 
 
 ## `headline` is shown above the day when there is something to say about

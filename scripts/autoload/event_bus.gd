@@ -14,6 +14,10 @@ signal day_started(day: int)
 ## The player asked to sleep (bed). The day transition UI runs the rollover.
 @warning_ignore("unused_signal")
 signal sleep_requested
+## The clock moved on a step. `minutes` counts from midnight, and past 24:00
+## in the small hours (see GameClock).
+@warning_ignore("unused_signal")
+signal time_changed(minutes: int)
 
 # --- Economy ---
 @warning_ignore("unused_signal")
@@ -34,10 +38,11 @@ signal toast_requested(text: String)
 # --- Health ---
 @warning_ignore("unused_signal")
 signal health_changed(health: int, max_health: int)
-## Health ran out. The night passes, the player wakes at home, and
+## The player dropped: health ran out (`cause` is &"hurt") or they stayed up
+## until the day ran out (&"late"). The night passes, they wake at home, and
 ## `money_lost` has already been taken.
 @warning_ignore("unused_signal")
-signal player_passed_out(money_lost: int)
+signal player_passed_out(money_lost: int, cause: StringName)
 
 # --- Stamina ---
 ## `ceiling` is how far it can refill today; `max_stamina` is a rested day's.

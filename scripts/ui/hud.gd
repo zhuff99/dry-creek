@@ -1,15 +1,22 @@
 extends Control
-## Always-on overlay: day, health, stamina, money, held item name,
+## Always-on overlay: day, time, health, stamina, money, held item name,
 ## interaction prompt, toasts.
 
 const TOAST_HOLD_SECONDS := 2.0
 const TOAST_SECONDS_PER_LETTER := 0.04
 const TOAST_FADE_SECONDS := 0.5
+const LATE_COLOR := Color(1.0, 0.55, 0.45)
+## Said once each as the night wears on: minutes from midnight -> message.
+const LATE_WARNINGS := {
+	24 * 60: "It's midnight. Time you were in bed.",
+	25 * 60: "You can barely keep your eyes open.",
+}
 
 var _toast_tween: Tween
 var _gun_drawn: bool = false
 
 @onready var _day_label: Label = $TopBar/DayLabel
+@onready var _time_label: Label = $TopBar/TimeLabel
 @onready var _money_label: Label = $TopBar/MoneyLabel
 @onready var _health_bar: ProgressBar = $TopBar/Vitals/Bars/Health
 @onready var _stamina_bar: StaminaBar = $TopBar/Vitals/Bars/Stamina
@@ -20,6 +27,7 @@ var _gun_drawn: bool = false
 
 func _ready() -> void:
 	EventBus.day_started.connect(_on_day_started)
+	EventBus.time_changed.connect(_on_time_changed)
 	EventBus.money_changed.connect(_on_money_changed)
 	EventBus.interaction_prompt_changed.connect(_on_prompt_changed)
 	EventBus.toast_requested.connect(_show_toast)
@@ -41,6 +49,14 @@ func _ready() -> void:
 
 func _on_day_started(day: int) -> void:
 	_set_text(_day_label, "Day %d" % day)
+	_on_time_changed(GameClock.shown_minutes())
+
+
+func _on_time_changed(minutes: int) -> void:
+	_set_text(_time_label, GameClock.time_text())
+	_time_label.modulate = LATE_COLOR if GameClock.is_late() else Color.WHITE
+	if LATE_WARNINGS.has(minutes):
+		_show_toast(LATE_WARNINGS[minutes])
 
 
 func _on_health_changed(health: int, max_health: int) -> void:

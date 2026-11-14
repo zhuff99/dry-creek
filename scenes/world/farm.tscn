@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/world/world_area.gd" id="1_farm"]
 [ext_resource type="Script" path="res://scripts/world/spawn_point.gd" id="9_spawn"]
+[ext_resource type="Script" path="res://scripts/world/night_light.gd" id="20_light"]
 [ext_resource type="PackedScene" path="res://scenes/objects/bottle.tscn" id="10_bottle"]
 [ext_resource type="Script" path="res://scripts/world/wildlife_spawner.gd" id="11_wildlife"]
 [ext_resource type="Script" path="res://scripts/objects/sign.gd" id="13_sign"]
@@ -85,3 +86,10 @@ prompt = "Read the sign"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TownSign"]
 shape = SubResource("RectangleShape2D_sign")
+
+[node name="LanternLight" type="PointLight2D" parent="."]
+position = Vector2(104, 222)
+color = Color(1, 0.8, 0.5, 1)
+texture_scale = 1.4
+script = ExtResource("20_light")
+strength = 0.75

@@ -10,6 +10,8 @@ extends Node2D
 
 ## Music playlist for this place (see MusicPlaylist).
 @export var music: StringName
+## Under a roof: lit mostly by fire and lamp, not by the sky (see DayNight).
+@export var indoors: bool = false
 ## The tile layer whose extent is the edge of the area. The camera stays
 ## inside it.
 @export var ground: TileMapLayer

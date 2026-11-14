@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="7_player"]
 [ext_resource type="Script" path="res://scripts/world/area_door.gd" id="8_door"]
 [ext_resource type="Script" path="res://scripts/world/spawn_point.gd" id="9_spawn"]
+[ext_resource type="Script" path="res://scripts/world/night_light.gd" id="20_light"]
 
 [sub_resource type="RectangleShape2D" id="Shape_Back"]
 size = Vector2(160, 42)
@@ -98,6 +99,7 @@ size = Vector2(14, 10)
 y_sort_enabled = true
 script = ExtResource("1_area")
 music = &"farm"
+indoors = true
 extent = Rect2i(0, 0, 160, 146)
 
 [node name="Room" type="Sprite2D" parent="."]
@@ -117,6 +119,23 @@ gravity = Vector2(0, -12)
 initial_velocity_min = 6.0
 initial_velocity_max = 12.0
 color = Color(1, 0.68, 0.36, 1)
+
+[node name="FireLight" type="PointLight2D" parent="."]
+position = Vector2(122, 34)
+color = Color(1, 0.7, 0.4, 1)
+texture_scale = 1.9
+script = ExtResource("20_light")
+strength = 0.7
+always = 0.45
+flicker = 0.12
+
+[node name="CandleLight" type="PointLight2D" parent="."]
+position = Vector2(120, 84)
+color = Color(1, 0.85, 0.6, 1)
+texture_scale = 0.8
+script = ExtResource("20_light")
+strength = 0.6
+always = 0.2
 
 [node name="Walls" type="StaticBody2D" parent="."]
 

@@ -55,7 +55,7 @@ func _swap(scene: PackedScene, spawn: StringName) -> void:
 	area.place_player(spawn)
 
 
-func _on_player_passed_out(_money_lost: int) -> void:
+func _on_player_passed_out(_money_lost: int, _cause: StringName) -> void:
 	_carry_home = true
 
 

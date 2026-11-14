@@ -23,6 +23,11 @@ var _primary_held: bool = false
 @onready var _cursor: Sprite2D = $TileCursor
 
 
+func _ready() -> void:
+	# Hidden until the first frame places it; a new area arrives paused.
+	_cursor.hide()
+
+
 func _process(_delta: float) -> void:
 	var grid := _get_farm_grid()
 	# No tile work indoors, or with a gun in hand.

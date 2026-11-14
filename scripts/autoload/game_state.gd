@@ -88,18 +88,23 @@ func add_money(amount: int) -> void:
 	EventBus.money_changed.emit(money)
 
 
-## Takes health away. At nothing, the player passes out: the day ends, a
-## share of their money goes, and they wake at home (World and the day
-## transition do the rest).
+## Takes health away. At nothing, the player passes out.
 func hurt(amount: int) -> void:
 	if health <= 0:
 		return
 	health -= amount
 	if health <= 0:
-		var lost := int(money * PASS_OUT_COST)
-		if lost > 0:
-			add_money(-lost)
-		EventBus.player_passed_out.emit(lost)
+		pass_out(&"hurt")
+
+
+## The player drops where they stand: the day ends, a share of their money
+## goes, and they wake at home (World and the day transition do the rest).
+## `cause` is &"hurt" or &"late".
+func pass_out(cause: StringName) -> void:
+	var lost := int(money * PASS_OUT_COST)
+	if lost > 0:
+		add_money(-lost)
+	EventBus.player_passed_out.emit(lost, cause)
 
 
 func heal(amount: int) -> void:

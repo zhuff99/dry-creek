@@ -2,6 +2,7 @@
 
 [ext_resource type="Texture2D" path="res://assets/derived/log_cabin.png" id="1_sprite"]
 [ext_resource type="Script" path="res://scripts/world/area_door.gd" id="2_door"]
+[ext_resource type="Script" path="res://scripts/world/night_light.gd" id="20_light"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(84, 26)
@@ -32,3 +33,17 @@ prompt = "Go inside"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Door"]
 shape = SubResource("RectangleShape2D_door")
+
+[node name="WindowLeft" type="PointLight2D" parent="."]
+position = Vector2(-23, -15)
+color = Color(1, 0.78, 0.45, 1)
+texture_scale = 0.55
+script = ExtResource("20_light")
+strength = 0.7
+
+[node name="WindowRight" type="PointLight2D" parent="."]
+position = Vector2(23, -15)
+color = Color(1, 0.78, 0.45, 1)
+texture_scale = 0.55
+script = ExtResource("20_light")
+strength = 0.7

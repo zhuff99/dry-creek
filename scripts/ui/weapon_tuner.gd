@@ -106,6 +106,7 @@ func _build() -> void:
 	_add_button(health_buttons, "Heal", func() -> void: GameState.heal(GameState.max_health))
 	_add_button(health_buttons, "Tire 25", func() -> void: GameState.exert(25.0))
 	_add_button(health_buttons, "Rest", GameState.rest_fully)
+	_add_button(health_buttons, "+1 hour", func() -> void: GameClock.minutes += 60.0)
 
 
 ## Exported whole or decimal numbers that were given a range.

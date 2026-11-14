@@ -96,18 +96,6 @@ func _run() -> void:
 	var river_sound: AudioStreamPlayer = main.get_node("World/Farm/RiverSound")
 	await _shot("01_start")
 
-	# --- Text: everything is written in the game's own pixel font, at its
-	# drawn size, and it has every character a message might use.
-	var day_label: Label = main.get_node("UI/HUD/TopBar/DayLabel")
-	var font: Font = day_label.get_theme_font(&"font")
-	_check(font.resource_path.ends_with("dry_creek.fnt"), "labels use the game's pixel font (%s)" % font.resource_path)
-	_check(day_label.get_theme_font_size(&"font_size") == 11, "at the size it was drawn for")
-	var undrawn := ""
-	for code: int in range(33, 127):
-		if not font.has_char(code) or font.get_char_size(code, 11).x <= 0.0:
-			undrawn += char(code)
-	_check(undrawn == "", "the font has every letter, number and mark (missing: '%s')" % undrawn)
-
 	# --- Wildlife: the day's snakes start out in the brush, well away from
 	# home. They are then removed so they cannot bite during the other checks.
 	var wildlife: Node = main.get_node("World/Farm/Wildlife")
@@ -126,6 +114,50 @@ func _run() -> void:
 	_check(nearest_to_home >= 12, "none within twelve tiles of the cabin door (nearest %d)" % nearest_to_home)
 	_check(hidden == snakes.size(), "each one beside brush, a rock or a tree")
 	wildlife.clear()
+	await _frames(2)
+
+	# --- Text: everything is written in the game's own pixel font, at its
+	# drawn size, and it has every character a message might use.
+	var day_label: Label = main.get_node("UI/HUD/TopBar/DayLabel")
+	var font: Font = day_label.get_theme_font(&"font")
+	_check(font.resource_path.ends_with("dry_creek.fnt"), "labels use the game's pixel font (%s)" % font.resource_path)
+	_check(day_label.get_theme_font_size(&"font_size") == 11, "at the size it was drawn for")
+	var undrawn := ""
+	for code: int in range(33, 127):
+		if not font.has_char(code) or font.get_char_size(code, 11).x <= 0.0:
+			undrawn += char(code)
+	_check(undrawn == "", "the font has every letter, number and mark (missing: '%s')" % undrawn)
+
+	# --- The clock: the day starts at six, time passes unless the game is
+	# paused, and the world darkens toward night while the lamps come up.
+	var time_label: Label = main.get_node("UI/HUD/TopBar/TimeLabel")
+	var day_night: CanvasModulate = main.get_node("World/DayNight")
+	var lantern: PointLight2D = main.get_node("World/Farm/LanternLight")
+	_check(time_label.text == "6:00 AM" and _clock.minutes < 6 * 60 + 10, "the day starts at 6:00 AM (%s)" % time_label.text)
+	var minutes_before: float = _clock.minutes
+	await create_timer(1.0).timeout
+	_check(_clock.minutes > minutes_before + 1.0 and _clock.minutes < minutes_before + 3.0,
+			"time passes: about a minute and a half each second (%.1f)" % (_clock.minutes - minutes_before))
+	paused = true
+	minutes_before = _clock.minutes
+	await _frames(10)
+	_check(_clock.minutes == minutes_before, "but not while the game is paused")
+	paused = false
+	_clock.minutes = 13 * 60 + 34.0
+	await _frames(2)
+	_check(time_label.text == "1:30 PM", "the clock reads in ten-minute steps (%s)" % time_label.text)
+	_check(day_night.color.is_equal_approx(Color.WHITE) and not lantern.enabled, "midday is plain daylight, lamps out")
+	_clock.minutes = 23 * 60.0
+	await _frames(2)
+	_check(day_night.color.get_luminance() < 0.5 and day_night.color.b > day_night.color.r,
+			"night is dark and blue (%s)" % day_night.color)
+	_check(lantern.enabled and lantern.energy > 0.5, "and the lantern by the cabin is lit (%.2f)" % lantern.energy)
+	_check(player.get_node("Lantern").enabled, "the player carries a light of their own")
+	_clock.minutes = 24 * 60.0
+	await _frames(2)
+	_check(time_label.text == "12:00 AM" and time_label.modulate != Color.WHITE, "after midnight the clock turns red")
+	_check(String(main.get_node("UI/HUD/ToastRow/ToastLabel").text).contains("midnight"), "and the game says it is time for bed")
+	_clock.minutes = 6 * 60 + 10.0
 	await _frames(2)
 
 	# --- Sound: the farm starts its music, and the river is faint from the cabin.
@@ -663,6 +695,9 @@ func _run() -> void:
 
 	# --- A rattlesnake: it warns, settles if you back off, strikes if you
 	# come close, and one shot kills it.
+	# The day's own snakes wander; one straying over would muddle the checks.
+	wildlife.clear()
+	await _frames(2)
 	var snake: Node2D = wildlife.spawn_at(FIRING_SPOT + Vector2(120, 0))
 	var snake_data: Resource = snake.data
 	player.global_position = FIRING_SPOT
@@ -749,6 +784,14 @@ func _run() -> void:
 		await process_frame
 	_check(_clock.day == day_before + 1, "sleeping in the bed starts the next day")
 	_check(_state.health == _state.max_health, "a night's sleep restores health")
+	_check(_clock.shown_minutes() == 6 * 60, "and the clock is back at six in the morning")
+	_clock.minutes = 23 * 60.0
+	await _frames(2)
+	_check(day_night.color.get_luminance() > 0.7, "indoors the fire keeps the night bright (%.2f)" % day_night.color.get_luminance())
+	_clock.minutes = 12 * 60.0
+	await _frames(2)
+	_check(world.area.get_node("FireLight").enabled, "the fire glows by day too")
+	_clock.minutes = 6 * 60.0
 	_check(_state.stamina == _state.max_stamina and _state.stamina_ceiling == _state.max_stamina, "and stamina, limit and all")
 	_check(world.area.name == "CabinInterior", "and you wake up inside")
 	await _shot("23_by_the_bed")
@@ -795,6 +838,26 @@ func _run() -> void:
 	_check(money_at_collapse >= 10 and _state.money == money_at_collapse - int(money_at_collapse * 0.1),
 			"and a tenth of your money is gone ($%d to $%d)" % [money_at_collapse, _state.money])
 	await _shot("25_woke_at_home")
+
+	# --- Staying up: at two in the morning the day ends whether you like it
+	# or not.
+	var day_before_late: int = _clock.day
+	var money_before_late: int = _state.money
+	_clock.minutes = 26 * 60 - 0.5
+	for i: int in 120:
+		if paused:
+			break
+		await process_frame
+	_check(paused, "at 2:00 AM the day ends by itself")
+	while paused:
+		await process_frame
+	await _frames(3)
+	_check(String(main.get_node("UI/DayTransition/Label").text).contains("too late"),
+			"the night screen says you stayed up too late")
+	_check(_clock.day == day_before_late + 1 and _clock.shown_minutes() == 6 * 60, "you wake the next morning at six")
+	_check(world.area.name == "CabinInterior", "at home")
+	_check(_state.money == money_before_late - int(money_before_late * 0.1),
+			"and it cost a tenth of your money ($%d to $%d)" % [money_before_late, _state.money])
 
 	for cue: StringName in EXPECTED_SOUNDS:
 		_check(audio.play_counts.get(cue, 0) > 0, "sound '%s' played (%d times)" % [cue, audio.play_counts.get(cue, 0)])

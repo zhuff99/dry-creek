@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://dlgioi8nigkj0" path="res://scripts/ui/screen_fade.gd" id="6_fade"]
 [ext_resource type="Script" uid="uid://cq1lun5d8i0me" path="res://scripts/ui/weapon_tuner.gd" id="7_tuner"]
 [ext_resource type="Texture2D" uid="uid://bf63o3wh6exwl" path="res://assets/ninja_adventure/ui/nine_path_bg_2.png" id="8_panel"]
+[ext_resource type="Script" path="res://scripts/world/day_night.gd" id="9_daynight"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_tuner"]
 content_margin_left = 6.0
@@ -25,6 +26,9 @@ texture_margin_bottom = 4.0
 [node name="World" type="Node2D" parent="." unique_id=521136355 node_paths=PackedStringArray("fade")]
 script = ExtResource("5_world")
 fade = NodePath("../UI/ScreenFade")
+
+[node name="DayNight" type="CanvasModulate" parent="World"]
+script = ExtResource("9_daynight")
 
 [node name="Farm" parent="World" unique_id=829868006 instance=ExtResource("1_farm")]
 position = Vector2(16, 19)

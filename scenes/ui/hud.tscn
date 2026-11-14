@@ -48,6 +48,11 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
 text = "Day 1"
 
+[node name="TimeLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
+text = "6:00 AM"
+
 [node name="Vitals" type="PanelContainer" parent="TopBar"]
 layout_mode = 2
 size_flags_vertical = 4

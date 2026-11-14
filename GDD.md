@@ -47,6 +47,8 @@ Pillars:
 
 ### 3.4 Time, stamina, sleep
 - A day runs on a clock (roughly 6am to 2am). Night is darker and more dangerous.
+- **Built so far:** the day starts at 6:00 AM and ten game minutes pass every seven seconds, so a full day to 2:00 AM is fourteen minutes of play. Time stops while the game is paused (backpack, doors, the night screen). The clock is on the HUD in ten-minute steps and turns red after midnight, with a nudge to go to bed at midnight and again at one. At 2:00 AM the player drops where they stand: the same pass-out as running out of health (a tenth of their money, wake at home at six). Sleeping in the bed at any hour starts the next day at six. The numbers are constants at the top of `GameClock`.
+- **Light:** the `DayNight` node tints the whole world by the hour (cool dawn, plain daylight from 7:30 to 5, gold evening, red sunset about 7:45, blue night from 10:30) and never touches the UI. Indoors most of that tint gives way to firelight. `NightLight` is a lamp that comes up as the sky darkens: the lantern post, the cabin's windows, the fireplace and candle inside, and a lantern the player carries so the dark is moody rather than blinding. Night is not more dangerous yet; that comes with night animals.
 - Tool use and combat rolls cost stamina. Sleeping restores it and advances the day. Passing out costs money and stamina.
 - **Built so far:** stamina starts at 100. Swinging a tool spends it (hoe 3, axe and pickaxe 4, scythe 2, a pour of the watering can 1; set per tool as `stamina_cost`). Planting, picking, filling the can and shooting cost nothing. After 1.2 seconds without working it refills at 14 a second, but only up to the day's limit: a quarter of everything spent is worn off that limit until the player sleeps. So short bursts are cheap, and a long day of work leaves less and less to work with. Out of stamina, tools do nothing until some returns (holding the button carries on by itself); once the limit is below a tool's cost, only sleep helps. The numbers are constants at the top of `GameState`. The bar sits under health: gold is what is left, the dim stretch comes back with rest, the hatched end is gone for the day.
 - Calendar: 4 seasons of 28 days.
@@ -191,7 +193,7 @@ Everything hangs off one mechanism: **actions emit world events, and only NPCs w
 | # | Name | Scope |
 |---|---|---|
 | **M1** | Farming vertical slice | Movement and camera, farm map, till/plant/water/harvest two crops, inventory and hotbar, day counter, sleep, shipping crate. |
-| **M2** | The working day | Clock and day/night tint, the broken well, crop withering, save/load on sleep, title/new-game flow. Stamina, watering can capacity, river refill and debris clearing are already in. |
+| **M2** | The working day | The broken well, crop withering, save/load on sleep, title/new-game flow. The clock, day and night, stamina, watering can capacity, river refill and debris clearing are already in. |
 | **M3** | Town and economy | Area transitions, town map, general store (buy seeds and the axe, pickaxe and scythe, which then leave the starting kit; sell goods), carpenter (first well and fence repairs), NPCs with schedules and basic dialogue, sheriff and deputies present as residents. |
 | **M4** | Combat core | Draw/holster, aim line, firing, reloading, revolver, player health, first wildlife (snake, coyote), first badlands map with valuables. |
 | **M5** | Law and wanted v1 | Perception, townsfolk reactions, witnesses and reporting, bribe/intimidate, bounty, arrest, jail day-skip, pay-off, deputy replacement. |
