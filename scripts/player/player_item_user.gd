@@ -37,8 +37,8 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	var grid := _get_farm_grid()
-	# No tile work indoors, or with a gun in hand.
-	if grid == null or _player.armed:
+	# No tile work indoors, with a gun in hand, or with the backpack open.
+	if grid == null or _player.armed or GameState.backpack_open:
 		_cursor.hide()
 		_ghost.hide()
 		_primary_held = false
@@ -61,6 +61,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if GameState.backpack_open:
+		return
 	if event.is_action_pressed(&"primary_action"):
 		if _player.armed:
 			return

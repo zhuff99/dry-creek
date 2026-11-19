@@ -341,27 +341,46 @@ func _run() -> void:
 	_check(_state.selected_slot == 2, "mouse wheel cycles the hotbar")
 	_press(&"toggle_inventory")
 	await _frames(3)
-	_check(panel.visible and paused, "backpack opens and pauses")
+	_check(panel.visible and not paused, "the backpack opens and the game keeps running")
 	await _shot("08_backpack")
+	_check(panel.slot_node(CORN_SEED_SLOT).get_parent().name == "HotbarGrid" and panel.slot_node(9).get_parent().name == "Grid",
+			"the hotbar has a strip of its own in the backpack")
+	_check(not panel.get_global_rect().has_point(player.get_global_transform_with_canvas().origin),
+			"the backpack does not cover the player")
+	var stood_at: Vector2 = player.global_position
+	var plots_with_bag_open: int = _state.farm.plots.size()
+	player.global_position = FIRING_SPOT
+	await _physics_frames(2)
+	_check(not player.get_node("ItemUser/TileCursor").visible, "the tile cursor is hidden while it is open")
+	_state.select_slot(HOE_SLOT)
+	_press(&"primary_action")
+	await _frames(3)
+	_release(&"primary_action")
+	_check(_state.farm.plots.size() == plots_with_bag_open and not player.busy, "and a click in the world does nothing")
+	Input.action_press(&"move_right")
+	await _physics_frames(10)
+	Input.action_release(&"move_right")
+	_check(player.global_position.x > FIRING_SPOT.x + 4.0, "the player can walk with the backpack open")
+	player.global_position = stood_at
+	await _physics_frames(2)
 	# Click a stack, then an empty slot, the way the panel's buttons report it.
-	var slots: Node = panel.get_node("Margin/VBox/Grid")
-	slots.get_child(CORN_SEED_SLOT).pressed.emit()
-	slots.get_child(20).pressed.emit()
+	panel.slot_node(CORN_SEED_SLOT).pressed.emit()
+	panel.slot_node(20).pressed.emit()
 	_check(_state.inventory.get_slot(20) != null and _state.inventory.get_slot(CORN_SEED_SLOT) == null,
 			"stacks can be moved between slots")
-	slots.get_child(20).pressed.emit()
-	slots.get_child(CORN_SEED_SLOT).pressed.emit()
+	panel.slot_node(20).pressed.emit()
+	panel.slot_node(CORN_SEED_SLOT).pressed.emit()
 	_check(_state.inventory.get_slot(CORN_SEED_SLOT) != null, "and moved back")
 	_press(&"toggle_inventory")
 	await _frames(3)
-	_check(not panel.visible and not paused, "backpack closes and unpauses")
+	_check(not panel.visible and not paused, "the backpack closes")
 
 	# --- Dragging stacks with the mouse: around the backpack, to and from the
 	# hotbar, and out onto the ground.
 	player.global_position = FIRING_SPOT
 	await _physics_frames(2)
 	var db: Node = root.get_node("ItemDB")
-	var bar_slots: Node = main.get_node("UI/HUD/Bottom/Hotbar")
+	var bar_slots: Node = main.get_node("UI/HUD/Bottom/HotbarFrame/Hotbar")
 	_press(&"toggle_inventory")
 	await _frames(3)
 	var seed_count: int = _state.inventory.get_slot(CORN_SEED_SLOT).count
@@ -369,29 +388,31 @@ func _run() -> void:
 	for i: int in range(_state.HOTBAR_SIZE, _state.inventory.size()):
 		if spare_slot == -1 and _state.inventory.get_slot(i) == null:
 			spare_slot = i
-	await _drag(_centre(slots.get_child(CORN_SEED_SLOT)), _centre(slots.get_child(spare_slot)), true)
+	await _drag(_centre(panel.slot_node(CORN_SEED_SLOT)), _centre(panel.slot_node(spare_slot)), true)
 	_check(_state.inventory.get_slot(spare_slot) != null and _state.inventory.get_slot(spare_slot).count == (seed_count + 1) / 2
 			and _state.inventory.get_slot(CORN_SEED_SLOT).count == seed_count / 2,
 			"Shift-drag takes half a stack into an empty slot")
-	await _drag(_centre(slots.get_child(spare_slot)), _centre(slots.get_child(CORN_SEED_SLOT)))
+	await _drag(_centre(panel.slot_node(spare_slot)), _centre(panel.slot_node(CORN_SEED_SLOT)))
 	_check(_state.inventory.get_slot(CORN_SEED_SLOT).count == seed_count and _state.inventory.get_slot(spare_slot) == null,
 			"and dragging it back onto the rest joins them up again")
 	var rounds_item: Resource = db.get_item(&"revolver_rounds")
 	var rounds_slot: int = _find_slot(rounds_item)
 	var scythe_item: Resource = _state.inventory.get_slot(SCYTHE_SLOT).item
 	var selected_before_drag: int = _state.selected_slot
-	await _drag(_centre(slots.get_child(rounds_slot)), _centre(bar_slots.get_child(SCYTHE_SLOT)))
+	await _drag(_centre(panel.slot_node(rounds_slot)), _centre(bar_slots.get_child(SCYTHE_SLOT)))
 	_check(_state.inventory.get_slot(SCYTHE_SLOT).item == rounds_item and _state.inventory.get_slot(rounds_slot).item == scythe_item,
 			"a backpack stack dragged onto the hotbar swaps places with what was there")
 	_check(_state.selected_slot == selected_before_drag, "and dragging does not select the hotbar slot")
-	await _drag(_centre(bar_slots.get_child(SCYTHE_SLOT)), _centre(slots.get_child(rounds_slot)))
+	await _drag(_centre(bar_slots.get_child(SCYTHE_SLOT)), _centre(panel.slot_node(rounds_slot)))
 	_check(_state.inventory.get_slot(SCYTHE_SLOT).item == scythe_item and _state.inventory.get_slot(rounds_slot).item == rounds_item,
 			"and dragged from the hotbar back into the backpack")
-	await _drag(_centre(slots.get_child(rounds_slot)), _centre(panel.get_node("Margin/VBox/Title")))
+	await _drag(_centre(panel.slot_node(rounds_slot)), _centre(panel.get_node("Margin/VBox/Title")))
 	_check(_state.inventory.get_slot(rounds_slot).item == rounds_item and get_nodes_in_group(&"ground_items").is_empty(),
 			"let go over the backpack itself and the stack stays where it was")
 	var rounds_held: int = _state.inventory.count_of(rounds_item)
-	await _drag(_centre(slots.get_child(rounds_slot)), Vector2(30, 140))
+	# A spot on the side of the screen the backpack is not on.
+	var over_the_world := Vector2(450, 190) if panel.position.x < 240.0 else Vector2(30, 190)
+	await _drag(_centre(panel.slot_node(rounds_slot)), over_the_world)
 	_check(_state.inventory.count_of(rounds_item) == 0 and _state.ground_items_in("res://scenes/world/farm.tscn").size() == 1,
 			"let go over the world and the stack is dropped")
 	var lying: Node2D = get_first_node_in_group(&"ground_items")

@@ -68,6 +68,9 @@ var shipping_bin: Dictionary[StringName, int] = {}
 ## back tomorrow.
 var wildlife_killed: Dictionary[String, bool] = {}
 
+## True while the backpack is open. The game keeps running and the player
+## can walk, but clicks in the world do nothing.
+var backpack_open: bool = false
 ## Things lying on the ground, by the scene path of the area they are in:
 ## a list of {"item": id, "count": n, "charge": n, "position": Vector2}.
 ## Plain data, so it survives the area being freed (and saves easily).

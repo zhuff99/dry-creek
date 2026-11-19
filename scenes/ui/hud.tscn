@@ -16,6 +16,22 @@ content_margin_top = 2.0
 content_margin_right = 5.0
 content_margin_bottom = 2.0
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hotbar"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0.36, 0.24, 0.15, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.945, 0.769, 0.443, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_back"]
 bg_color = Color(0.08, 0.05, 0.03, 1)
 
@@ -112,9 +128,9 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -160.0
-offset_top = -64.0
+offset_top = -72.0
 offset_right = 160.0
-offset_bottom = -4.0
+offset_bottom = -3.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
@@ -133,9 +149,14 @@ size_flags_horizontal = 4
 theme_override_styles/normal = SubResource("StyleBoxFlat_backing")
 horizontal_alignment = 1
 
-[node name="Hotbar" type="HBoxContainer" parent="Bottom"]
+[node name="HotbarFrame" type="PanelContainer" parent="Bottom"]
 layout_mode = 2
 size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hotbar")
+
+[node name="Hotbar" type="HBoxContainer" parent="Bottom/HotbarFrame"]
+layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 2
 script = ExtResource("2_hotbar")
