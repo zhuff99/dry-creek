@@ -143,8 +143,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	elif event.is_action_pressed(&"primary_action"):
 		# A click with the gun lowered does nothing: no accidental shots.
-		# Nor does one with the backpack open.
-		if aiming and not GameState.backpack_open:
+		# Nor does one with a menu open.
+		if aiming and not GameState.menu_open:
 			fire()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"reload"):

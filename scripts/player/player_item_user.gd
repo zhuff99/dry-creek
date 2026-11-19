@@ -38,7 +38,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var grid := _get_farm_grid()
 	# No tile work indoors, with a gun in hand, or with the backpack open.
-	if grid == null or _player.armed or GameState.backpack_open:
+	if grid == null or _player.armed or GameState.menu_open:
 		_cursor.hide()
 		_ghost.hide()
 		_primary_held = false
@@ -61,7 +61,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if GameState.backpack_open:
+	if GameState.menu_open:
 		return
 	if event.is_action_pressed(&"primary_action"):
 		if _player.armed:
@@ -71,10 +71,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_explain_if_useless(target_cell)
 		_explain_if_tired(target_cell)
 		use_item_at(target_cell)
-	elif event.is_action_pressed(&"aim") and _holding_tool(ToolData.ToolType.SAW) and not _player.armed:
+	elif event.is_action_pressed(&"dismantle") and _holding_tool(ToolData.ToolType.SAW) and not _player.armed:
 		dismantle_at(target_cell)
-	elif event.is_action_pressed(&"cycle_blueprint") and _holding_tool(ToolData.ToolType.SAW):
-		GameState.cycle_blueprint()
 	elif event.is_action_pressed(&"hotbar_next"):
 		GameState.select_slot(GameState.selected_slot + 1)
 	elif event.is_action_pressed(&"hotbar_prev"):

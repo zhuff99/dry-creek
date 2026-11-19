@@ -968,7 +968,7 @@ func _run() -> void:
 	var item_label: Label = main.get_node("UI/HUD/Bottom/ItemLabel")
 	var saw_slot: int = _to_hotbar(item_db.get_item(&"saw"))
 	_state.select_slot(saw_slot)
-	_state.blueprint_index = 0
+	_state.set_blueprint(&"fence")
 	var fence_piece: Resource = _state.blueprint()
 	await _frames(2)
 	_check(fence_piece.id == &"fence" and item_label.text.contains("Fence") and item_label.text.contains("2 wood"),
@@ -1004,10 +1004,35 @@ func _run() -> void:
 	_check(first_length.connections == first_length.EAST and first_length.get_node("Sprite2D").frame_coords == Vector2i(first_length.EAST, 0),
 			"lengths side by side join up (%d)" % first_length.connections)
 	_check(not paths.is_open(ring[0]), "animals cannot walk through a fence")
-	_press(&"cycle_blueprint")
+	# --- The build menu: tabs, pieces, what they cost.
+	var build_menu: Control = main.get_node("UI/BuildMenu")
+	var cost_label: Label = build_menu.get_node("Margin/VBox/Details/Cost")
+	_press(&"build_menu")
+	await _frames(3)
+	_release(&"build_menu")
+	_check(build_menu.visible and not paused and _state.menu_open,
+			"right-click with the saw opens the build menu, and the game keeps running")
+	_check(build_menu.shown_category() == "Fencing" and build_menu.piece_button(&"fence").visible
+			and build_menu.piece_button(&"gate").visible and not build_menu.piece_button(&"lantern_post").visible,
+			"it opens on the fencing tab, showing the fence and the gate")
+	_check(build_menu.piece_button(&"fence").button_pressed, "with the piece in hand marked")
+	build_menu.piece_button(&"gate").mouse_entered.emit()
+	await _frames(1)
+	_check(build_menu.get_node("Margin/VBox/Details/Name").text == "Gate" and cost_label.text.contains("Wood 3"),
+			"pointing at a piece shows its name and cost ('%s')" % cost_label.text)
+	await _shot("26_build_menu")
+	_press(&"toggle_inventory")
+	await _frames(3)
+	_check(panel.visible and not build_menu.visible, "opening the backpack closes the build menu")
+	_press(&"toggle_inventory")
+	await _frames(3)
+	_press(&"build_menu")
+	await _frames(3)
+	_release(&"build_menu")
+	build_menu.piece_button(&"gate").pressed.emit()
 	await _frames(2)
-	_release(&"cycle_blueprint")
-	_check(_state.blueprint().id == &"gate" and item_label.text.contains("Gate"), "F moves the saw on to the gate ('%s')" % item_label.text)
+	_check(_state.blueprint().id == &"gate" and not build_menu.visible and not _state.menu_open and item_label.text.contains("Gate"),
+			"clicking a piece picks it and closes the menu ('%s')" % item_label.text)
 	var gate_cell: Vector2i = pen + Vector2i(1, 2)
 	await item_user.use_item_at(gate_cell)
 	var gate_node: Node2D = grid.built_node(gate_cell)
@@ -1059,8 +1084,22 @@ func _run() -> void:
 	var wood_before_down: int = _state.inventory.count_of(wood)
 	_check(item_user.dismantle_at(ring[0]) and not _state.farm.is_built(ring[0]) and _state.inventory.count_of(wood) == wood_before_down + 2,
 			"a fence taken down gives its wood back")
-	_state.cycle_blueprint()
-	_check(_state.blueprint().id == &"lantern_post", "the saw's third piece is a lantern post")
+	_press(&"build_menu")
+	await _frames(3)
+	_release(&"build_menu")
+	build_menu.tab_button("Lighting").pressed.emit()
+	await _frames(2)
+	_check(build_menu.shown_category() == "Lighting" and build_menu.piece_button(&"lantern_post").visible
+			and not build_menu.piece_button(&"fence").visible, "the lighting tab has the lantern post")
+	var wood_now: int = _state.inventory.count_of(wood)
+	_state.inventory.remove_item(wood, wood_now)
+	await _frames(1)
+	_check(build_menu.piece_button(&"lantern_post").modulate.a < 1.0 and cost_label.modulate != Color.WHITE,
+			"pieces you cannot afford are dimmed, and the cost shows in red")
+	_state.inventory.add_item(wood, wood_now)
+	await _frames(1)
+	build_menu.piece_button(&"lantern_post").pressed.emit()
+	_check(_state.blueprint().id == &"lantern_post", "and choosing it sets the saw to build it")
 	await item_user.use_item_at(ring[0])
 	var post: Node2D = grid.built_node(ring[0])
 	_check(post != null and post.has_node("Light") and _state.inventory.count_of(wood) == wood_before_down + 2 - 4,

@@ -68,15 +68,15 @@ var shipping_bin: Dictionary[StringName, int] = {}
 ## back tomorrow.
 var wildlife_killed: Dictionary[String, bool] = {}
 
-## True while the backpack is open. The game keeps running and the player
-## can walk, but clicks in the world do nothing.
-var backpack_open: bool = false
+## True while a menu (the backpack, the build menu) is open. The game keeps
+## running and the player can walk, but clicks in the world do nothing.
+var menu_open: bool = false
 ## Things lying on the ground, by the scene path of the area they are in:
 ## a list of {"item": id, "count": n, "charge": n, "position": Vector2}.
 ## Plain data, so it survives the area being freed (and saves easily).
 var ground_items: Dictionary[String, Array] = {}
-## Which of ItemDB.buildables() the saw is set to build.
-var blueprint_index: int = 0
+## The id of what the saw builds (a BuildableData). Chosen in the build menu.
+var blueprint_id: StringName = &""
 ## How torn up the cabin is, 0 to CABIN_MAX_DAMAGE. It stays until mended.
 var cabin_damage: int = 0
 ## Coyotes of tonight's pack that have been killed. The rest come back if
@@ -151,19 +151,18 @@ func ground_items_in(area_key: String) -> Array:
 	return ground_items.get(area_key, [])
 
 
-## What the saw builds right now, or null if nothing can be built.
+## What the saw builds right now: the chosen piece, or the first one if
+## none has been chosen yet. Null if nothing can be built.
 func blueprint() -> BuildableData:
 	var all := ItemDB.buildables()
-	if all.is_empty():
-		return null
-	return all[posmod(blueprint_index, all.size())]
+	for piece: BuildableData in all:
+		if piece.id == blueprint_id:
+			return piece
+	return all[0] if not all.is_empty() else null
 
 
-func cycle_blueprint(step: int = 1) -> void:
-	var all := ItemDB.buildables()
-	if all.is_empty():
-		return
-	blueprint_index = posmod(blueprint_index + step, all.size())
+func set_blueprint(id: StringName) -> void:
+	blueprint_id = id
 	EventBus.blueprint_changed.emit()
 
 

@@ -8,6 +8,7 @@
 [resource]
 script = ExtResource("1_script")
 id = &"fence"
+category = "Fencing"
 display_name = "Fence"
 description = "Keeps animals out. Join lengths up to make a run."
 icon = ExtResource("2_icon")

@@ -8,6 +8,7 @@
 [resource]
 script = ExtResource("1_script")
 id = &"gate"
+category = "Fencing"
 display_name = "Gate"
 description = "You walk straight through it. Animals cannot."
 icon = ExtResource("2_icon")

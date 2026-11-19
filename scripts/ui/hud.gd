@@ -109,7 +109,7 @@ func _refresh_item_label() -> void:
 		_set_text(_item_label, "")
 	elif stack.item is ToolData and (stack.item as ToolData).tool_type == ToolData.ToolType.SAW and GameState.blueprint() != null:
 		var piece := GameState.blueprint()
-		_set_text(_item_label, "Build: %s  (%d %s)   [F] next" % [
+		_set_text(_item_label, "Build: %s  (%d %s)   Right-click: menu" % [
 			piece.display_name, piece.material_count, piece.material.display_name.to_lower()])
 	elif stack.capacity() > 0:
 		_set_text(_item_label, "%s  %d/%d" % [stack.item.display_name, stack.charge, stack.capacity()])

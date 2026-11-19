@@ -10,6 +10,8 @@ extends Resource
 @export_multiline var description: String
 ## Shown as the see-through preview on the tile about to be built on.
 @export var icon: Texture2D
+## The build menu's tab it is under.
+@export var category: String = "Other"
 ## The piece itself. Its origin sits on the bottom edge of its tile.
 @export var scene: PackedScene
 ## What it is made of, and how many it takes.

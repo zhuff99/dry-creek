@@ -12,6 +12,7 @@ region = Rect2(96, 80, 16, 32)
 [resource]
 script = ExtResource("1_script")
 id = &"lantern_post"
+category = "Lighting"
 display_name = "Lantern Post"
 description = "Lights the ground around it at night."
 icon = SubResource("AtlasTexture_icon")
