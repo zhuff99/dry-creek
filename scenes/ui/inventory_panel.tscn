@@ -50,5 +50,6 @@ columns = 9
 
 [node name="Hint" type="Label" parent="Margin/VBox"]
 layout_mode = 2
-text = "Click a slot, then another, to move or swap. Top row is the hotbar."
+text = "Drag to move. Shift-drag to split. Drag out of the bag to drop.
+The top row is your hotbar."
 horizontal_alignment = 1

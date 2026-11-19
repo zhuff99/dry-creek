@@ -108,6 +108,64 @@ func set_charge(index: int, value: int) -> void:
 	changed.emit()
 
 
+## Moves `count` of the stack in slot `from` onto slot `to`. A whole stack
+## merges with the same item or swaps with anything else; part of a stack
+## goes into an empty slot or onto the same item, never swaps. True if
+## anything moved.
+func move_part(from: int, to: int, count: int) -> bool:
+	var source := get_slot(from)
+	if source == null or from == to or to < 0 or to >= _slots.size() or count <= 0:
+		return false
+	var target := _slots[to]
+	if count >= source.count:
+		if target != null and target.item == source.item and target.count >= source.item.max_stack:
+			return false
+		move_slot(from, to)
+		return true
+	if target == null:
+		_slots[to] = ItemStack.new(source.item, count)
+		source.count -= count
+	elif target.item == source.item:
+		var moved: int = mini(count, source.item.max_stack - target.count)
+		if moved <= 0:
+			return false
+		target.count += moved
+		source.count -= moved
+	else:
+		return false
+	changed.emit()
+	return true
+
+
+## Takes `count` out of slot `index` and returns them as a stack of their
+## own (a whole tool keeps what it holds), or null if the slot is empty.
+func take_from_slot(index: int, count: int) -> ItemStack:
+	var stack := get_slot(index)
+	if stack == null or count <= 0:
+		return null
+	if count >= stack.count:
+		_slots[index] = null
+		changed.emit()
+		return stack
+	stack.count -= count
+	changed.emit()
+	return ItemStack.new(stack.item, count)
+
+
+## Adds a whole stack and returns how many did not fit. A tool that holds
+## something (water in the can) goes into an empty slot as it is, so it
+## keeps what it holds.
+func add_stack(stack: ItemStack) -> int:
+	if stack.capacity() <= 0:
+		return add_item(stack.item, stack.count)
+	for i: int in _slots.size():
+		if _slots[i] == null:
+			_slots[i] = stack
+			changed.emit()
+			return 0
+	return stack.count
+
+
 ## Moves slot `from` onto slot `to`: merges matching items, otherwise swaps.
 func move_slot(from: int, to: int) -> void:
 	if from == to or get_slot(from) == null or to < 0 or to >= _slots.size():

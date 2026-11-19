@@ -18,11 +18,16 @@ extends Node2D
 ## For a painted room with no tile layer: the area's extent in pixels.
 @export var extent: Rect2i
 
+const GROUND_ITEM_SCENE := preload("res://scenes/objects/ground_item.tscn")
+
 @onready var player: Player = $Entities/Player
 
 
 func _ready() -> void:
 	player.set_camera_limits(_bounds())
+	# Whatever was left lying here last time.
+	for record: Dictionary in GameState.ground_items_in(scene_file_path):
+		_show_ground_item(record, null)
 	Audio.play_music(music)
 
 
@@ -36,6 +41,19 @@ func place_player(spawn: StringName) -> void:
 		return
 	player.global_position = point.global_position
 	player.face(point.facing)
+
+
+## Puts `stack` on the ground at `where`, thrown from `from`.
+func drop_item(stack: ItemStack, where: Vector2, from: Vector2) -> GroundItem:
+	var record := GameState.add_ground_item(scene_file_path, stack, where)
+	return _show_ground_item(record, from)
+
+
+func _show_ground_item(record: Dictionary, from: Variant) -> GroundItem:
+	var node := GROUND_ITEM_SCENE.instantiate() as GroundItem
+	node.setup(record, scene_file_path, from)
+	$Entities.add_child(node)
+	return node
 
 
 func _bounds() -> Rect2i:

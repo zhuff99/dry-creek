@@ -36,6 +36,7 @@ const EXPECTED_SOUNDS: Array[StringName] = [
 	&"select", &"ui_open", &"ui_close", &"ui_pick", &"ui_place", &"error", &"door",
 	&"gun_draw", &"gun_holster", &"gunshot", &"gun_empty", &"gun_load", &"bottle_break", &"hurt",
 	&"snake_rattle", &"snake_strike", &"snake_die",
+	&"item_drop", &"item_pickup",
 	&"coyote_howl", &"coyote_yelp", &"coyote_bite", &"coyote_die", &"crop_eaten", &"cabin_hit",
 ]
 ## Where the test stands to shoot: in the field, four tiles north of the
@@ -354,6 +355,77 @@ func _run() -> void:
 	_press(&"toggle_inventory")
 	await _frames(3)
 	_check(not panel.visible and not paused, "backpack closes and unpauses")
+
+	# --- Dragging stacks with the mouse: around the backpack, to and from the
+	# hotbar, and out onto the ground.
+	player.global_position = FIRING_SPOT
+	await _physics_frames(2)
+	var db: Node = root.get_node("ItemDB")
+	var bar_slots: Node = main.get_node("UI/HUD/Bottom/Hotbar")
+	_press(&"toggle_inventory")
+	await _frames(3)
+	var seed_count: int = _state.inventory.get_slot(CORN_SEED_SLOT).count
+	var spare_slot := -1
+	for i: int in range(_state.HOTBAR_SIZE, _state.inventory.size()):
+		if spare_slot == -1 and _state.inventory.get_slot(i) == null:
+			spare_slot = i
+	await _drag(_centre(slots.get_child(CORN_SEED_SLOT)), _centre(slots.get_child(spare_slot)), true)
+	_check(_state.inventory.get_slot(spare_slot) != null and _state.inventory.get_slot(spare_slot).count == (seed_count + 1) / 2
+			and _state.inventory.get_slot(CORN_SEED_SLOT).count == seed_count / 2,
+			"Shift-drag takes half a stack into an empty slot")
+	await _drag(_centre(slots.get_child(spare_slot)), _centre(slots.get_child(CORN_SEED_SLOT)))
+	_check(_state.inventory.get_slot(CORN_SEED_SLOT).count == seed_count and _state.inventory.get_slot(spare_slot) == null,
+			"and dragging it back onto the rest joins them up again")
+	var rounds_item: Resource = db.get_item(&"revolver_rounds")
+	var rounds_slot: int = _find_slot(rounds_item)
+	var scythe_item: Resource = _state.inventory.get_slot(SCYTHE_SLOT).item
+	var selected_before_drag: int = _state.selected_slot
+	await _drag(_centre(slots.get_child(rounds_slot)), _centre(bar_slots.get_child(SCYTHE_SLOT)))
+	_check(_state.inventory.get_slot(SCYTHE_SLOT).item == rounds_item and _state.inventory.get_slot(rounds_slot).item == scythe_item,
+			"a backpack stack dragged onto the hotbar swaps places with what was there")
+	_check(_state.selected_slot == selected_before_drag, "and dragging does not select the hotbar slot")
+	await _drag(_centre(bar_slots.get_child(SCYTHE_SLOT)), _centre(slots.get_child(rounds_slot)))
+	_check(_state.inventory.get_slot(SCYTHE_SLOT).item == scythe_item and _state.inventory.get_slot(rounds_slot).item == rounds_item,
+			"and dragged from the hotbar back into the backpack")
+	await _drag(_centre(slots.get_child(rounds_slot)), _centre(panel.get_node("Margin/VBox/Title")))
+	_check(_state.inventory.get_slot(rounds_slot).item == rounds_item and get_nodes_in_group(&"ground_items").is_empty(),
+			"let go over the backpack itself and the stack stays where it was")
+	var rounds_held: int = _state.inventory.count_of(rounds_item)
+	await _drag(_centre(slots.get_child(rounds_slot)), Vector2(30, 140))
+	_check(_state.inventory.count_of(rounds_item) == 0 and _state.ground_items_in("res://scenes/world/farm.tscn").size() == 1,
+			"let go over the world and the stack is dropped")
+	var lying: Node2D = get_first_node_in_group(&"ground_items")
+	_check(lying != null and lying.record.count == rounds_held, "it lies on the ground, all %d of them" % rounds_held)
+	_press(&"toggle_inventory")
+	await _frames(3)
+	await create_timer(0.6).timeout
+	_check(lying.global_position.distance_to(player.global_position) < 16.0 and _state.inventory.count_of(rounds_item) == 0,
+			"at the player's feet, and it is not picked straight back up")
+	await _shot("08b_dropped")
+	player.global_position = FIRING_SPOT + Vector2(60, 0)
+	await _physics_frames(4)
+	player.global_position = FIRING_SPOT + Vector2(0, 12)
+	var waited_for_pickup := 0
+	while is_instance_valid(lying) and waited_for_pickup < 120:
+		await physics_frame
+		waited_for_pickup += 1
+	_check(_state.inventory.count_of(rounds_item) == rounds_held and _state.ground_items_in("res://scenes/world/farm.tscn").is_empty(),
+			"step away and come back, and it is picked up again")
+	# A watering can keeps its water through a drop and a pick-up.
+	_state.inventory.set_charge(CAN_SLOT, 7)
+	_bus.item_drop_requested.emit(CAN_SLOT, 1)
+	await _physics_frames(2)
+	_check(_state.inventory.get_slot(CAN_SLOT) == null, "(the watering can is on the ground)")
+	await create_timer(0.3).timeout
+	player.global_position = FIRING_SPOT + Vector2(60, 0)
+	await _physics_frames(4)
+	player.global_position = FIRING_SPOT + Vector2(0, 12)
+	waited_for_pickup = 0
+	while _state.inventory.get_slot(CAN_SLOT) == null and waited_for_pickup < 120:
+		await physics_frame
+		waited_for_pickup += 1
+	_check(_state.inventory.get_slot(CAN_SLOT) != null and _state.inventory.get_slot(CAN_SLOT).charge == 7,
+			"a watering can picked back up still holds its water, and goes back in its slot")
 
 	# --- Clicking uses the selected item on the targeted tile.
 	player.global_position = grid.cell_center(Vector2i(24, 21)) + Vector2(0, 4)
@@ -995,6 +1067,9 @@ func _run() -> void:
 	var day_before: int = _clock.day
 	player.global_position = door_spot
 	await _physics_frames(3)
+	# Something left lying by the door is still there after going indoors.
+	_bus.item_drop_requested.emit(BEAN_SEED_SLOT, 1)
+	await _physics_frames(2)
 	await _use_door()
 	_check(world.area.name == "CabinInterior", "the cabin door leads inside")
 	player = world.area.get_node("Entities/Player")
@@ -1045,6 +1120,9 @@ func _run() -> void:
 	_check(world.area.name == "Farm", "the door leads back out to the farm")
 	player = world.area.get_node("Entities/Player")
 	_check(world.area.get_node("FarmGrid").cell_at(player.global_position) == CABIN_DOOR_CELL, "onto the cabin's doorstep")
+	var left_by_door: Array[Node] = get_nodes_in_group(&"ground_items")
+	_check(left_by_door.size() == 1 and left_by_door[0].record.item == &"bean_seeds",
+			"the seed dropped by the door is lying where it was left")
 	var soil: TileMapLayer = world.area.get_node("Map/Soil")
 	var grid_again: Node = world.area.get_node("FarmGrid")
 	_check(grid_again.built_node(kept_fence) != null and grid_again.built_node(kept_fence).connections != 0,
@@ -1140,6 +1218,46 @@ func _use_door() -> void:
 	while paused:
 		await process_frame
 	await _frames(3)
+
+
+## Drags with the left mouse button from one point of the screen to another,
+## as a hand on the mouse would. With `split`, Shift is held as it starts.
+func _drag(from: Vector2, to: Vector2, split: bool = false) -> void:
+	if split:
+		Input.action_press(&"split_stack")
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.pressed = true
+	press.position = from
+	press.global_position = from
+	root.push_input(press, true)
+	await process_frame
+	var last := from
+	for step: int in range(1, 7):
+		var at := from.lerp(to, step / 6.0)
+		var move := InputEventMouseMotion.new()
+		move.button_mask = MOUSE_BUTTON_MASK_LEFT
+		move.position = at
+		move.global_position = at
+		move.relative = at - last
+		last = at
+		root.push_input(move, true)
+		await process_frame
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = to
+	release.global_position = to
+	root.push_input(release, true)
+	await process_frame
+	if split:
+		Input.action_release(&"split_stack")
+	await process_frame
+
+
+func _centre(control: Control) -> Vector2:
+	return control.get_global_rect().get_center()
 
 
 func _press(action: StringName) -> void:

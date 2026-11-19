@@ -68,6 +68,10 @@ var shipping_bin: Dictionary[StringName, int] = {}
 ## back tomorrow.
 var wildlife_killed: Dictionary[String, bool] = {}
 
+## Things lying on the ground, by the scene path of the area they are in:
+## a list of {"item": id, "count": n, "charge": n, "position": Vector2}.
+## Plain data, so it survives the area being freed (and saves easily).
+var ground_items: Dictionary[String, Array] = {}
 ## Which of ItemDB.buildables() the saw is set to build.
 var blueprint_index: int = 0
 ## How torn up the cabin is, 0 to CABIN_MAX_DAMAGE. It stays until mended.
@@ -124,6 +128,24 @@ func pass_out(cause: StringName) -> void:
 
 func heal(amount: int) -> void:
 	health += amount
+
+
+## Puts `stack` on the ground in the area `area_key` and returns its record.
+func add_ground_item(area_key: String, stack: ItemStack, where: Vector2) -> Dictionary:
+	var record := {"item": stack.item.id, "count": stack.count, "charge": stack.charge, "position": where}
+	if not ground_items.has(area_key):
+		ground_items[area_key] = []
+	ground_items[area_key].append(record)
+	return record
+
+
+func remove_ground_item(area_key: String, record: Dictionary) -> void:
+	if ground_items.has(area_key):
+		ground_items[area_key].erase(record)
+
+
+func ground_items_in(area_key: String) -> Array:
+	return ground_items.get(area_key, [])
 
 
 ## What the saw builds right now, or null if nothing can be built.

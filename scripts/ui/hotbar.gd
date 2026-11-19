@@ -1,5 +1,6 @@
 extends HBoxContainer
-## The first HOTBAR_SIZE inventory slots, always on screen. Click to select.
+## The first HOTBAR_SIZE inventory slots, always on screen. Click to select;
+## drag to rearrange, to or from the backpack, or out onto the ground.
 
 const SLOT_SCENE := preload("res://scenes/ui/item_slot.tscn")
 
@@ -9,6 +10,7 @@ var _slots: Array[ItemSlotUI] = []
 func _ready() -> void:
 	for i: int in GameState.HOTBAR_SIZE:
 		var slot: ItemSlotUI = SLOT_SCENE.instantiate()
+		slot.index = i
 		add_child(slot)
 		slot.pressed.connect(GameState.select_slot.bind(i))
 		_slots.append(slot)

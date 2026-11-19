@@ -34,6 +34,10 @@ signal hotbar_slot_selected(index: int)
 signal interaction_prompt_changed(text: String)
 @warning_ignore("unused_signal")
 signal toast_requested(text: String)
+## A stack was dragged out of the inventory and let go over the world:
+## `count` from slot `index` goes on the ground at the player's feet.
+@warning_ignore("unused_signal")
+signal item_drop_requested(index: int, count: int)
 
 # --- Health ---
 @warning_ignore("unused_signal")

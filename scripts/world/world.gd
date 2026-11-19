@@ -5,6 +5,8 @@ extends Node2D
 ## Where the player wakes after passing out.
 const HOME_SCENE := "res://scenes/world/cabin_interior.tscn"
 const HOME_SPAWN := &"bed"
+## How far in front of the player a dropped stack lands.
+const DROP_REACH := 10.0
 
 @export var fade: ScreenFade
 
@@ -24,6 +26,7 @@ func _ready() -> void:
 	EventBus.area_change_requested.connect(change_area)
 	EventBus.player_passed_out.connect(_on_player_passed_out)
 	EventBus.day_started.connect(_on_day_started)
+	EventBus.item_drop_requested.connect(_on_item_drop_requested)
 
 
 func change_area(scene_path: String, spawn: StringName) -> void:
@@ -53,6 +56,17 @@ func _swap(scene: PackedScene, spawn: StringName) -> void:
 	area = scene.instantiate() as WorldArea
 	add_child(area)
 	area.place_player(spawn)
+
+
+## A stack dragged out of the inventory lands just in front of the player.
+func _on_item_drop_requested(index: int, count: int) -> void:
+	if area == null or _changing:
+		return
+	var stack := GameState.inventory.take_from_slot(index, count)
+	if stack == null:
+		return
+	var player := area.player
+	area.drop_item(stack, player.global_position + player.facing * DROP_REACH, player.global_position)
 
 
 func _on_player_passed_out(_money_lost: int, _cause: StringName) -> void:

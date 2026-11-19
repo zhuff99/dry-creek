@@ -103,6 +103,8 @@ Central, not optional. Aiming is inspired by Desperados 3.
 
 ### 3.11 Inventory, economy, saving
 - Slot inventory with a 9-slot hotbar. Items are data (`ItemData` and subclasses).
+- **Built so far:** a 27-slot backpack (Tab) whose top row is the 9-slot hotbar. Stacks are dragged with the mouse between any two slots, backpack or the hotbar along the bottom of the screen, whether or not the backpack is open: onto an empty slot to move, onto the same item to merge, onto anything else to swap. Holding Shift as the drag starts takes half the stack. Let go over the world and the stack is dropped at the player's feet; let go over the backpack between its slots and nothing happens. Clicking one slot and then another still moves stacks too.
+- **Things on the ground** stay where they were left, in whichever area, until picked up (`GameState.ground_items`, plain data, so it will save). Something just dropped cannot be picked up until the player has stepped away from it; after that, walking close draws it in. A tool keeps what it holds (water in the can) through a drop.
 - Income: shipping crate (paid overnight), direct sales in shops, bounties, cards.
 - Save on sleep. One save file per ranch.
 

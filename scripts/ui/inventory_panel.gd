@@ -1,6 +1,10 @@
 extends PanelContainer
 ## Full backpack view. Opens with the toggle_inventory action and pauses the
-## game while open. Click a slot, then another, to move or swap stacks.
+## game while open. Stacks are dragged between slots (see ItemSlotUI), or
+## clicked: click a slot, then another, to move or swap.
+##
+## A stack let go over the panel itself, between the slots, stays where it
+## was; let go outside the panel, it is dropped on the ground.
 
 const SLOT_SCENE := preload("res://scenes/ui/item_slot.tscn")
 const NO_SLOT := -1
@@ -16,6 +20,7 @@ func _ready() -> void:
 	hide()
 	for i: int in GameState.inventory.size():
 		var slot: ItemSlotUI = SLOT_SCENE.instantiate()
+		slot.index = i
 		_grid.add_child(slot)
 		slot.pressed.connect(_on_slot_pressed.bind(i))
 		_slots.append(slot)
@@ -52,6 +57,14 @@ func _on_slot_pressed(index: int) -> void:
 	GameState.inventory.move_slot(from, index)
 	# move_slot does not emit when nothing moved (same slot), so redraw anyway.
 	_refresh()
+
+
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	return ItemSlotUI.is_slot_drag(data)
+
+
+func _drop_data(_at_position: Vector2, _data: Variant) -> void:
+	pass  # Taking the drop is what keeps it out of the world.
 
 
 func _refresh() -> void:
